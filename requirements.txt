@@ -1,0 +1,8 @@
+accelerate==1.3.0
+datasets==3.2.0
+huggingface_hub==0.27.1
+moviepy==2.0.0.dev2
+pytest==8.3.4
+tensorflow==2.18.0
+tensorflow_datasets==4.9.7
+tyro==0.9.14

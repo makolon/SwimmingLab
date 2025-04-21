@@ -1,0 +1,46 @@
+# SWIM Extension
+FROM isaac-lab-ros2 AS isaaclab_swim
+
+# Path to the IsaacSWIM direcotry
+ARG SWIMLAB_PATH_ARG
+ENV SWIMLAB_PATH=${SWIMLAB_PATH_ARG}
+
+# Install dependencies
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && apt-get install -y --no-install-recommends \
+    autoconf \
+    automake \
+    git-core \
+    libaom-dev \
+    libass-dev \
+    libfreetype6-dev \
+    libgnutls28-dev \
+    libmp3lame-dev \
+    libnuma-dev \
+    libopus-dev \
+    libtool \
+    libvorbis-dev \
+    libvpx-dev \
+    meson \
+    nasm \
+    ninja-build \
+    pkg-config \
+    texinfo \
+    wget \
+    yasm \
+    zlib1g-dev
+
+# Copy the requirements.txt
+COPY ../requirements.txt ./
+
+# Upgrade pip
+RUN --mount=type=cache,target=/var/cache/apt \
+    ${ISAACLAB_PATH}/_isaac_sim/python.sh -m pip install --upgrade pip
+
+# Install python package
+RUN --mount=type=cache,target=/var/cache/apt \
+    ${ISAACLAB_PATH}/_isaac_sim/python.sh -m pip install -r requirements.txt
+
+# make working directory as the SWIMLab directory
+# this is the default directory when the container is run
+WORKDIR ${SWIMLAB_PATH}

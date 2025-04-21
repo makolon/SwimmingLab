@@ -1,0 +1,27 @@
+[package]
+
+# Note: Semantic Versioning is used: https://semver.org/
+version = "0.1.0"
+
+# Description
+title = "SWIM IsaacLab"
+author = "SWIMLab Project Developers"
+maintainer = "SWIMLab Project Developers"
+description = "Isaac Lab for TMC SWIM."
+readme = "docs/README.md"
+repository = "https://github.com/makolon/SWIMLab"
+category = "isaaclab"
+keywords = ["extension", "isaaclab"]
+
+[dependencies]
+"isaaclab" = {}
+"isaaclab_assets" = {}
+"isaaclab_mimic" = {}
+"isaaclab_rl" = {}
+"isaaclab_tasks" = {}
+
+[core]
+reloadable = false
+
+[[python.module]]
+name = "swimlab"
