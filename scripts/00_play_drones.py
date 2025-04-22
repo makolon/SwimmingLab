@@ -34,7 +34,7 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym
 import swimlab  # noqa: F401
-import swimab_tasks  # noqa: F401
+import swimlab_tasks  # noqa: F401
 import time
 import torch
 from isaaclab_tasks.utils import parse_env_cfg

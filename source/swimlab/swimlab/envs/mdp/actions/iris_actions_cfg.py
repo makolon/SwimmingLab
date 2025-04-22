@@ -1,39 +1,24 @@
-from isaaclab.managers import ActionTermCfg
+from dataclasses import MISSING
+from typing import Sequence, Tuple
+
+from isaaclab.managers.action_manager import ActionTerm, ActionTermCfg
 from isaaclab.utils import configclass
-from . import iris_actions
-
-
-# Rotor parameters for the IRIS quadrotor
-ROTOR_CONFIG = {
-    "rotor_angles": [0.0, 1.5708, 3.1416, -1.5708],
-    "arm_lengths": [0.17, 0.17, 0.17, 0.17],
-    "force_constants": [8.54858e-6] * 4,
-    "moment_constants": [1.6e-2] * 4,
-    "directions": [1, -1, 1, -1],
-    "max_rotation_velocities": [838.0] * 4,
-}
+from swimlab.controllers import LeePositionControllerCfg
+from swimlab.envs.mdp.actions import iris_actions
 
 
 @configclass
 class IRISVelocityActionCfg(ActionTermCfg):
-    """6‑DoF velocity → 4 rotor commands for the IRIS quadrotor."""
-    class_type: type = iris_actions.IRISVelocityAction
+    """Config for velocity + yaw rate action mapped through LeePositionController."""
+    class_type: type[ActionTerm] = iris_actions.IRISVelocityAction
 
-    rotor_joint_names: list[str] = (
-        "rotor_0_joint",
-        "rotor_1_joint",
-        "rotor_2_joint",
-        "rotor_3_joint",
-    )
-
-    mass: float = 1.5
-    inertia: tuple[float, float, float] = (0.03, 0.03, 0.06)
-    rotor_config: dict = ROTOR_CONFIG
-
-    v_max: float = 5.0   # max linear velocity [m/s]
-    w_max: float = 2.0   # max angular velocity [rad/s]
-
-    scale: tuple[float, ...] = (1.0,) * 6
-    offset: tuple[float, ...] = (0.0,) * 6
-    bounding_strategy: str | None = "clip"
-
+    joint_names: list[str] = MISSING
+    """List of joint names or regex expressions that the action will be mapped to."""
+    body_name: str = MISSING
+    """Name of the body or frame for which IK is performed."""
+    linear_scale: Sequence[float] | float = (1.0, 1.0, 1.0)
+    """Scale factor for the linear velocity scale. Defaults to (1.0, 1.0, 1.0)."""
+    yaw_scale: float = 1.0
+    """Scale factor for the yaw velocity targets. Defaults to 1.0."""
+    controller: LeePositionControllerCfg = MISSING
+    """The configuration for the lee position controller."""
