@@ -32,13 +32,13 @@ def compute_mixer_and_limits(rotor_params: dict, device: str) -> Tuple[torch.Ten
 
 class LeePositionController:
 
-    def __init__(self, cfg: LeePositionControllerCfg, num_envs: int, device: str):
+    def __init__(self, cfg: LeePositionControllerCfg, rotor_params: dict[str, float], num_envs: int, device: str):
         # store inputs
         self.cfg = cfg
         self.num_envs = num_envs
         self._device = device
 
-        self._mixer, self._max_thrusts, self._I_inv = compute_mixer_and_limits(cfg.rotor_params, device)
+        self._mixer, self._max_thrusts, self._I_inv = compute_mixer_and_limits(rotor_params, device)
         self._mass = torch.tensor(cfg.mass, dtype=torch.float32, device=device)
 
     """
@@ -124,13 +124,13 @@ class LeePositionController:
 
 class AttitudeController:
 
-    def __init__(self, cfg: AttitudeControllerCfg, num_envs: int, device: str):
+    def __init__(self, cfg: AttitudeControllerCfg, rotor_params: dict[str, float], num_envs: int, device: str):
         # store inputs
         self.cfg = cfg
         self.num_envs = num_envs
         self._device = device
 
-        self._mixer, self._max_thrusts, _ = compute_mixer_and_limits(cfg.rotor_params, device)
+        self._mixer, self._max_thrusts, _ = compute_mixer_and_limits(rotor_params, device)
         self._mass = torch.tensor(cfg.mass, dtype=torch.float32, device=device)
         self._gain_att = torch.tensor(cfg.gain_attitude, dtype=torch.float32, device=device)
         self._gain_rate = torch.tensor(cfg.gain_angular_rate, dtype=torch.float32, device=device)
@@ -212,13 +212,13 @@ class AttitudeController:
 
 class RateController:
 
-    def __init__(self, cfg: RateControllerCfg, num_envs: int, device: str):
+    def __init__(self, cfg: RateControllerCfg, rotor_params: dict[str, float], num_envs: int, device: str):
         # store inputs
         self.cfg = cfg
         self.num_envs = num_envs
         self._device = device
 
-        self._mixer, self._max_thrusts, _ = compute_mixer_and_limits(cfg.rotor_params, device=device)
+        self._mixer, self._max_thrusts, _ = compute_mixer_and_limits(rotor_params, device=device)
         self._mass = torch.tensor(cfg.mass, dtype=torch.float32, device=device)
         self._gain_rate = torch.tensor(cfg.gain_angular_rate, dtype=torch.float32, device=device)
 

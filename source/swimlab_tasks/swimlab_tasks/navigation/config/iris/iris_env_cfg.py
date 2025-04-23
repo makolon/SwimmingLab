@@ -38,7 +38,6 @@ class IRISPlainNavigationEnvCfg(NavigationBaseEnvCfg):
                 "rotor_2_joint",
                 "rotor_3_joint",
             ],
-            body_name="base_link",
             linear_scale=[1.0, 1.0, 1.0],
             yaw_scale=1.0,
             controller=LeePositionControllerCfg(
@@ -48,16 +47,16 @@ class IRISPlainNavigationEnvCfg(NavigationBaseEnvCfg):
                 velocity_gain=[2.2, 2.2, 2.2],
                 attitude_gain=[0.7, 0.7, 0.035],
                 angular_rate_gain=[0.1, 0.1, 0.025],
-                rotor_params={
-                    "rotor_angles": [-0.533708, 2.565218, 0.533708, -2.565218],
-                    "arm_lengths": [0.255539, 0.238537, 0.238539, 0.238537],
-                    "force_constants": [8.54858e-06, 8.54858e-06, 8.54858e-06, 8.54858e-06],
-                    "moment_constants": [1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07],
-                    "directions": [1.0, 1.0, -1.0, -1.0],
-                    "max_rotation_velocities": [838, 838, 838, 838],
-                    "inertia": {"xx": 0.0347563, "xy": 0.0, "xz": 0.0, "yy": 0.0458929, "yz": 0.0, "zz": 0.0977},
-                }
-            )
+            ),
+            rotor_params={
+                "rotor_angles": [-0.533708, 2.565218, 0.533708, -2.565218],
+                "arm_lengths": [0.255539, 0.238537, 0.238539, 0.238537],
+                "force_constants": [8.54858e-06, 8.54858e-06, 8.54858e-06, 8.54858e-06],
+                "moment_constants": [1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07],
+                "directions": [1.0, 1.0, -1.0, -1.0],
+                "max_rotation_velocities": [838, 838, 838, 838],
+                "inertia": {"xx": 0.0347563, "xy": 0.0, "xz": 0.0, "yy": 0.0458929, "yz": 0.0, "zz": 0.0977},
+            }
         )
 
 
@@ -77,8 +76,6 @@ class IRISLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
 
         # robot
         self.scene.robot = IRIS_CFG
-        # fix the robot position
-        self.scene.robot.init_state.pos = [0.0, 0.0, 0.5]
 
         self.actions.thruster_action = mdp.IRISVelocityActionCfg(
             asset_name="robot",
@@ -88,7 +85,6 @@ class IRISLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
                 "rotor_2_joint",
                 "rotor_3_joint",
             ],
-            body_name="base_link",
             linear_scale=[1.0, 1.0, 1.0],
             yaw_scale=1.0,
             controller=LeePositionControllerCfg(
@@ -98,16 +94,16 @@ class IRISLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
                 velocity_gain=[2.2, 2.2, 2.2],
                 attitude_gain=[0.7, 0.7, 0.035],
                 angular_rate_gain=[0.1, 0.1, 0.025],
-                rotor_params={
-                    "rotor_angles": [-0.533708, 2.565218, 0.533708, -2.565218],
-                    "arm_lengths": [0.255539, 0.238537, 0.238539, 0.238537],
-                    "force_constants": [8.54858e-06, 8.54858e-06, 8.54858e-06, 8.54858e-06],
-                    "moment_constants": [1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07],
-                    "directions": [1.0, 1.0, -1.0, -1.0],
-                    "max_rotation_velocities": [838, 838, 838, 838],
-                    "inertia": {"xx": 0.0347563, "xy": 0.0, "xz": 0.0, "yy": 0.0458929, "yz": 0.0, "zz": 0.0977},
-                }
-            )
+            ),
+            rotor_params={
+                "rotor_angles": [-0.533708, 2.565218, 0.533708, -2.565218],
+                "arm_lengths": [0.255539, 0.238537, 0.238539, 0.238537],
+                "force_constants": [8.54858e-06, 8.54858e-06, 8.54858e-06, 8.54858e-06],
+                "moment_constants": [1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07],
+                "directions": [1.0, 1.0, -1.0, -1.0],
+                "max_rotation_velocities": [838, 838, 838, 838],
+                "inertia": {"xx": 0.0347563, "xy": 0.0, "xz": 0.0, "yy": 0.0458929, "yz": 0.0, "zz": 0.0977},
+            }
         )
 
 
