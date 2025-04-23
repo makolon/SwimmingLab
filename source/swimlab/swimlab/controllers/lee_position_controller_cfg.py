@@ -9,8 +9,6 @@ class LeePositionControllerCfg:
     """Configuration for SE3 Lee position controller."""
     class_type: type = LeePositionController
 
-    mass: float = 1.0
-    """The mass of the rigid body."""
     gravity: float = 9.81
     """The gravity of the simulation."""
     position_gain: float | Sequence[float] = (1.0, 1.0, 1.0)
@@ -27,8 +25,6 @@ class AttitudeControllerCfg:
     """Configuration for attitude controller."""
     class_type: type = AttitudeController
 
-    mass: float = 1.0
-    """The mass of the rigid body."""
     gravity: float = 9.81
     """The gravity of the simulation."""
     gain_attitude: Sequence[float] = (1.0, 1.0, 1.0)
@@ -42,8 +38,6 @@ class RateControllerCfg:
     """Configuration for rate controller."""
     class_type: type = RateController
 
-    mass: float = 1.0
-    """The mass of the rigid body."""
     gravity: float = 9.81
     """The gravity of the simulation."""
     gain_angular_rate: Sequence[float] = (1.0, 1.0, 1.0)

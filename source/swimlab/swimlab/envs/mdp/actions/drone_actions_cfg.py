@@ -28,22 +28,22 @@ class DroneVelocityActionCfg(ActionTermCfg):
     """Parameters for the thrust and body force / torque calculation. Defauls to None, in which case the default parameters for the method are use."""
 
     def __post_init__(self):
-        # default parameters of the rotor.
         default_rotor_params = {
-            "rotor_angles": [0.0, 0.0, 0.0, 0.0],
-            "arm_lengths": [0.0, 0.0, 0.0, 0.0],
-            "force_constants": [0.0, 0.0, 0.0, 0.0],
-            "moment_constants": [0.0, 0.0, 0.0, 0.0],
-            "directions": [1.0, 1.0, 1.0, 1.0],
-            "max_rotation_velocities": [1.0, 1.0, 1.0, 1.0],
+            "num_rotors": 4,
+            "rotor_angles": [0.0, 1.57, 3.14, 4.71],
+            "arm_lengths": [0.225, 0.225, 0.225, 0.225],
+            "force_constants": [0.0] * 4,
+            "moment_constants": [0.0] * 4,
+            "kf": [0.0] * 4,
+            "km": [0.0] * 4,
+            "directions": [1, -1, 1, -1],
+            "max_rotation_velocities": [1.0] * 4,
+            "mass": 1.0,
             "inertia": {"xx": 1.0, "xy": 0.0, "xz": 0.0, "yy": 1.0, "yz": 0.0, "zz": 1.0},
-            "kf": 0.0,
-            "km": 0.0,
-            "drag_coef": 0.0,
-            "tau_up": 0.0,
-            "tau_down": 0.0,
+            "drag_coef": 0.1,
+            "tau_up": [1.0] * 4,
+            "tau_down": [1.0] * 4,
         }
-        # update parameters if not provided
         rotor_params = default_rotor_params.copy()
         if self.rotor_params is not None:
             rotor_params.update(self.rotor_params)

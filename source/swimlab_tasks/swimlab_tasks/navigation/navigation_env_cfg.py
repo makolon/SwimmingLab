@@ -48,7 +48,7 @@ class CommandsCfg:
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    thruster_action: ActionTerm = MISSING
+    drone_action: ActionTerm = MISSING
 
 
 @configclass

@@ -23,11 +23,12 @@ def compute_mixer_and_limits(rotor_params: dict, device: str) -> Tuple[torch.Ten
         torch.ones_like(rotor_angles),
     ])
     inertia = rotor_params["inertia"]
+    mass = torch.tensor(rotor_params["mass"], device=device)
     I = torch.diag_embed(torch.tensor([inertia["xx"], inertia["yy"], inertia["zz"], 1.0], device=device))
     mixer = A.T @ torch.inverse(A @ A.T) @ I
     max_thrusts = max_rot_vel.square() * force_constants
     I_inv = torch.inverse(I[:3, :3])
-    return mixer, max_thrusts, I_inv
+    return mixer, max_thrusts, mass, I_inv
 
 
 class LeePositionController:
@@ -38,8 +39,7 @@ class LeePositionController:
         self.num_envs = num_envs
         self._device = device
 
-        self._mixer, self._max_thrusts, self._I_inv = compute_mixer_and_limits(rotor_params, device)
-        self._mass = torch.tensor(cfg.mass, dtype=torch.float32, device=device)
+        self._mixer, self._max_thrusts, self._mass, self._I_inv = compute_mixer_and_limits(rotor_params, device)
 
     """
     Properties.
@@ -130,8 +130,7 @@ class AttitudeController:
         self.num_envs = num_envs
         self._device = device
 
-        self._mixer, self._max_thrusts, _ = compute_mixer_and_limits(rotor_params, device)
-        self._mass = torch.tensor(cfg.mass, dtype=torch.float32, device=device)
+        self._mixer, self._max_thrusts, self._mass, _ = compute_mixer_and_limits(rotor_params, device)
         self._gain_att = torch.tensor(cfg.gain_attitude, dtype=torch.float32, device=device)
         self._gain_rate = torch.tensor(cfg.gain_angular_rate, dtype=torch.float32, device=device)
 
@@ -218,8 +217,7 @@ class RateController:
         self.num_envs = num_envs
         self._device = device
 
-        self._mixer, self._max_thrusts, _ = compute_mixer_and_limits(rotor_params, device=device)
-        self._mass = torch.tensor(cfg.mass, dtype=torch.float32, device=device)
+        self._mixer, self._max_thrusts, _, _ = compute_mixer_and_limits(rotor_params, device=device)
         self._gain_rate = torch.tensor(cfg.gain_angular_rate, dtype=torch.float32, device=device)
 
     """
