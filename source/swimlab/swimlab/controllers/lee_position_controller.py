@@ -63,13 +63,13 @@ class LeePositionController:
         self.num_envs = num_envs
         self.device = device
 
-        self.mixer, self.max_thrusts, self.mass, _ = compute_mixer_and_limits(
+        self.mixer, self.max_thrusts, self.mass, self.I_inv = compute_mixer_and_limits(
             rotor_params, device
         )
         self.pos_gain = torch.as_tensor(cfg.position_gain, device=device)
         self.vel_gain = torch.as_tensor(cfg.velocity_gain, device=device)
-        self.att_gain = torch.as_tensor(cfg.attitude_gain, device=device)
-        self.rate_gain = torch.as_tensor(cfg.angular_rate_gain, device=device)
+        self.att_gain = torch.as_tensor(cfg.attitude_gain, device=device) @ self.I_inv[:3, :3]
+        self.rate_gain = torch.as_tensor(cfg.angular_rate_gain, device=device) @ self.I_inv[:3, :3]
         self.g_vec = torch.tensor([0.0, 0.0, cfg.gravity], device=device)
 
     @property
@@ -158,9 +158,9 @@ class AttitudeController:
         self.num_envs = num_envs
         self.device = device
 
-        self.mixer, self.max_thrusts, _, _ = compute_mixer_and_limits(rotor_params, device)
-        self.att_gain = torch.as_tensor(cfg.gain_attitude, device=device)
-        self.rate_gain = torch.as_tensor(cfg.gain_angular_rate, device=device)
+        self.mixer, self.max_thrusts, _, self.I_inv = compute_mixer_and_limits(rotor_params, device)
+        self.att_gain = torch.as_tensor(cfg.gain_attitude, device=device) @ self.I_inv
+        self.rate_gain = torch.as_tensor(cfg.gain_angular_rate, device=device) @ self.I_inv
 
     @property
     def action_dim(self) -> int:

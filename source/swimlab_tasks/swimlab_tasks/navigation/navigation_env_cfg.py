@@ -26,7 +26,6 @@ import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    null_command = mdp.NullCommandCfg()
     base_velocity = mdp.UniformVelocityCommandCfg(
         asset_name="robot",
         resampling_time_range=(10.0, 10.0),
@@ -116,7 +115,7 @@ class RewardsCfg:
         func=mdp.track_lin_vel_xy_exp, weight=1.0, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
     track_ang_vel_z_exp = RewTerm(
-       func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+        func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
@@ -165,8 +164,20 @@ class NavigationBaseEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.render_interval = self.decimation
         self.sim.physx.enable_ccd = True
         self.sim.physx.enable_stabilization = True
-        self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
+        self.sim.physx.bounce_threshold_velocity = 0.2
+        self.sim.physx.friction_offset_threshold = 0.1
+        self.sim.physx.friction_correlation_distance = 0.00625
+        self.sim.physx.gpu_max_rigid_contact_count = 1024 * 1024 * 64
+        self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 64
+        self.sim.physx.gpu_total_aggregate_pairs_capacity = 64 * 1024
+        self.sim.physx.solver_type = 0
         self.sim.physics_material = self.scene.terrain.physics_material
+        self.sim.physics_material.static_friction = 100.0
+        self.sim.physics_material.dynamic_friction = 100.0
+        self.sim.physics_material.restitution = 0.0
+        self.sim.render.enable_translucency = True
+        self.sim.render.enable_reflections = True
+        self.sim.render.enable_reflections = True
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
         if self.scene.height_scanner is not None:
