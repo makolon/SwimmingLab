@@ -49,10 +49,10 @@ class IRISPlainNavigationEnvCfg(NavigationBaseEnvCfg):
             yaw_scale=1.0,
             controller=LeePositionControllerCfg(
                 gravity=9.81,
-                position_gain=[4.0, 4.0, 4.0],
-                velocity_gain=[2.2, 2.2, 2.2],
-                attitude_gain=[0.7, 0.7, 0.035],
-                angular_rate_gain=[0.1, 0.1, 0.025],
+                position_gain=[6.0, 6.0, 6.0],
+                velocity_gain=[4.7, 4.7, 4.7],
+                attitude_gain=[3.0, 3.0, 0.15],
+                angular_rate_gain=[0.52, 0.52, 0.18],
             ),
             rotor_params={
                 "num_rotors": 4,
@@ -60,13 +60,13 @@ class IRISPlainNavigationEnvCfg(NavigationBaseEnvCfg):
                 "arm_lengths": [0.255539, 0.238537, 0.238539, 0.238537],
                 "force_constants": [8.54858e-06, 8.54858e-06, 8.54858e-06, 8.54858e-06],
                 "moment_constants": [1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07],
-                "kf": [6.11-8] * 4,
-                "km": [1.5e-9] * 4,
-                "directions": [1.0, -1.0, 1.0, -1.0],
+                "kf": [6.003189] * 4,
+                "km": [0.001053366] * 4,
+                "directions": [1.0, 1.0, -1.0, -1.0],
                 "max_rotation_velocities": [838, 838, 838, 838],
                 "mass": 1.52,
                 "inertia": {"xx": 0.0347563, "xy": 0.0, "xz": 0.0, "yy": 0.0458929, "yz": 0.0, "zz": 0.0977},
-                "drag_coef": 0.1,
+                "drag_coef": 0.2,
                 "tau_up": [0.43] * 4,
                 "tau_down": [0.43] * 4,
             }
@@ -81,7 +81,7 @@ class IRISLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
     scene: LivingRoomSceneCfg = LivingRoomSceneCfg(num_envs=4096, env_spacing=2.5)
 
     # viewer settings
-    viewer: ViewerCfg = ViewerCfg(eye=(-2.0, -3.5, 1.2), lookat=(4.0, 3.0, 0.0))
+    viewer: ViewerCfg = ViewerCfg(eye=(10.0, 10.0, 10.0), lookat=(0.0, 0.0, 0.0))
 
     def __post_init__(self):
         """Post initialization."""

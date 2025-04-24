@@ -26,7 +26,7 @@ import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    null_commands = mdp.NullCommandCfg()
+    null_command = mdp.NullCommandCfg()
     # base_velocity = mdp.UniformVelocityCommandCfg(
     #     asset_name="robot",
     #     resampling_time_range=(10.0, 10.0),
@@ -116,7 +116,7 @@ class RewardsCfg:
     #     func=mdp.track_lin_vel_xy_exp, weight=1.0, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     # )
     # track_ang_vel_z_exp = RewTerm(
-    #     func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+    #    func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     # )
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
@@ -159,7 +159,7 @@ class NavigationBaseEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 1
-        self.episode_length_s = 1000.0
+        self.episode_length_s = 20.0
         # simulation settings
         self.sim.dt = 1 / 60
         self.sim.render_interval = self.decimation

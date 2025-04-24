@@ -89,7 +89,6 @@ def main():
 
             # Sample random actions
             actions = torch.zeros_like(env.action_manager.action)
-            actions[:, 1] = 1.0
 
             # Step the environment
             obs, rew, terminated, truncated, info = env.step(actions)

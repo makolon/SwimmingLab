@@ -30,19 +30,19 @@ class DroneVelocityActionCfg(ActionTermCfg):
     def __post_init__(self):
         default_rotor_params = {
             "num_rotors": 4,
-            "rotor_angles": [0.0, 1.57, 3.14, 4.71],
-            "arm_lengths": [0.225, 0.225, 0.225, 0.225],
+            "rotor_angles": [0.0, 0.0, 0.0, 0.0],
+            "arm_lengths": [0.0, 0.0, 0.0, 0.0],
             "force_constants": [0.0] * 4,
             "moment_constants": [0.0] * 4,
             "kf": [0.0] * 4,
             "km": [0.0] * 4,
-            "directions": [1, -1, 1, -1],
+            "directions": [1, 1, -1, -1],
             "max_rotation_velocities": [1.0] * 4,
             "mass": 1.0,
             "inertia": {"xx": 1.0, "xy": 0.0, "xz": 0.0, "yy": 1.0, "yz": 0.0, "zz": 1.0},
-            "drag_coef": 0.1,
+            "drag_coef": 1.0,
             "tau_up": [1.0] * 4,
-            "tau_down": [1.0] * 4,
+            "tau_down": [0.0] * 4,
         }
         rotor_params = default_rotor_params.copy()
         if self.rotor_params is not None:
