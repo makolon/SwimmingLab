@@ -46,9 +46,9 @@ IRIS_CFG = ArticulationCfg(
                 "rotor_2_joint",
                 "rotor_3_joint",
             ],
-            saturation_effort=1e6,
-            effort_limit=1e6,
-            velocity_limit=1e6,
+            saturation_effort=1e8,
+            effort_limit=1e8,
+            velocity_limit=1e8,
             stiffness={
                 "rotor_0_joint": 0.0,
                 "rotor_1_joint": 0.0,
@@ -56,10 +56,10 @@ IRIS_CFG = ArticulationCfg(
                 "rotor_3_joint": 0.0,
             },
             damping={
-                "rotor_0_joint": 1e5,
-                "rotor_1_joint": 1e5,
-                "rotor_2_joint": 1e5,
-                "rotor_3_joint": 1e5,
+                "rotor_0_joint": 1e8,
+                "rotor_1_joint": 1e8,
+                "rotor_2_joint": 1e8,
+                "rotor_3_joint": 1e8,
             },
             armature={
                 "rotor_0_joint": 0.0,

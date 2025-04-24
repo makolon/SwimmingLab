@@ -42,19 +42,19 @@ class DroneVelocityAction(ActionTerm):
         self._target_yaw = torch.zeros(self.num_envs, 1, device=self.device)
 
         # rotor parameters
+        self._num_rotors = torch.as_tensor(cfg.rotor_params["num_rotors"], device=self.device).view(1, -1)
         self._tau_up = torch.as_tensor(cfg.rotor_params["tau_up"], device=self.device).view(1, -1)
         self._tau_down = torch.as_tensor(cfg.rotor_params["tau_down"], device=self.device).view(1, -1)
         self._kf = torch.as_tensor(cfg.rotor_params["kf"], device=self.device).view(1, -1)
         self._km = torch.as_tensor(cfg.rotor_params["km"], device=self.device).view(1, -1)
         self._directions = torch.as_tensor(cfg.rotor_params["directions"], device=self.device).view(1, -1)
         self._max_rotvel = torch.as_tensor(cfg.rotor_params["max_rotation_velocities"], device=self.device).view(1, -1)
-        self._num_rotors = int(cfg.rotor_params["num_rotors"])
-        self._drag_coef = float(cfg.rotor_params["drag_coef"])
-        self._mass = float(cfg.rotor_params["mass"])
+        self._drag_coef = torch.as_tensor(cfg.rotor_params["drag_coef"], device=self.device).view(1, -1)
+        self._mass = torch.as_tensor(cfg.rotor_params["mass"], device=self.device).view(1, -1)
 
         # run-time buffers
         self._rotor_throttle = torch.zeros(self.num_envs, self._num_rotors, device=self.device)
-        self._rotor_velocities = torch.zeros_like(self._rotor_throttle)
+        self._rotor_velocities = torch.zeros(self.num_envs, self._num_rotors, device=self.device)
         self._rotor_thrusts = torch.zeros(self.num_envs, self._num_rotors, 3, device=self.device)
         self._body_torques = torch.zeros(self.num_envs, 3, device=self.device)
         self._body_forces = torch.zeros(self.num_envs, 3, device=self.device)
@@ -123,12 +123,13 @@ class DroneVelocityAction(ActionTerm):
 
         self._rotor_thrusts.zero_()
         self._rotor_thrusts[..., 2] = thrusts
+        self._body_torques.zero_()
         self._body_torques[:] = (moments.unsqueeze(-1) * torque_axis).sum(-2)
 
         # drag force
-        body_vel = self._asset.data.body_vel_w[:, self._base_body_ids, :]
-        drag = (self._drag_coef * self._mass) * body_vel[..., :3]
-        self._body_forces[:] = drag.sum(dim=1)
+        body_vel = self._asset.data.root_vel_w[:, :]
+        self._body_forces.zero_()
+        self._body_forces[:] += (self._drag_coef * self._mass) * body_vel[..., :3]
 
         # apply per-rotor forces
         self._asset.set_external_force_and_torque(
@@ -138,12 +139,12 @@ class DroneVelocityAction(ActionTerm):
         )
 
         # apply aggregate force / torque on base link(s)
-        B = len(self._base_body_ids)
-        self._asset.set_external_force_and_torque(
-            forces=self._body_forces.unsqueeze(1).expand(-1, B, -1),
-            torques=self._body_torques.unsqueeze(1).expand(-1, B, -1),
-            body_ids=self._base_body_ids,
-        )
+        # B = len(self._base_body_ids)
+        # self._asset.set_external_force_and_torque(
+        #     forces=self._body_forces.unsqueeze(1).expand(-1, B, -1),
+        #     torques=self._body_torques.unsqueeze(1).expand(-1, B, -1),
+        #     body_ids=self._base_body_ids,
+        # )
 
         # spin joints for visualisation
         self._rotor_velocities = self._rotor_throttle * self._directions * self._max_rotvel
