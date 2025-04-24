@@ -38,7 +38,7 @@ class DroneVelocityAction(ActionTerm):
         self._yaw_scale = torch.tensor(cfg.yaw_scale, device=self.device).view(1, 1)
 
         # command storage
-        self._target_vel = torch.zeros(self.num_envs, 3, device=self.device)
+        self._target_pos = torch.zeros(self.num_envs, 3, device=self.device)
         self._target_yaw = torch.zeros(self.num_envs, 1, device=self.device)
 
         # rotor parameters
@@ -85,7 +85,7 @@ class DroneVelocityAction(ActionTerm):
         self._processed_actions[:, 3:4] = actions[:, 3:4] * self._yaw_scale
         if self.cfg.clip is not None:
             self._processed_actions.clamp_(-self.cfg.clip, self.cfg.clip)
-        self._target_vel[:] = self._processed_actions[:, :3]
+        self._target_pos[:] = self._processed_actions[:, :3]
         self._target_yaw[:] = self._processed_actions[:, 3:4]
 
     def apply_actions(self) -> torch.Tensor:
@@ -101,7 +101,7 @@ class DroneVelocityAction(ActionTerm):
 
         rotor_cmd = self._controller.compute(
             root_state=root_state,
-            target_vel=self._target_vel,
+            target_pos=self._target_pos,
             target_yaw=self._target_yaw,
         ).clamp_(-1.0, 1.0)
 
@@ -139,12 +139,12 @@ class DroneVelocityAction(ActionTerm):
         )
 
         # apply aggregate force / torque on base link(s)
-        # B = len(self._base_body_ids)
-        # self._asset.set_external_force_and_torque(
-        #     forces=self._body_forces.unsqueeze(1).expand(-1, B, -1),
-        #     torques=self._body_torques.unsqueeze(1).expand(-1, B, -1),
-        #     body_ids=self._base_body_ids,
-        # )
+        B = len(self._base_body_ids)
+        self._asset.set_external_force_and_torque(
+            forces=self._body_forces.unsqueeze(1).expand(-1, B, -1),
+            torques=self._body_torques.unsqueeze(1).expand(-1, B, -1),
+            body_ids=self._base_body_ids,
+        )
 
         # spin joints for visualisation
         self._rotor_velocities = self._rotor_throttle * self._directions * self._max_rotvel
