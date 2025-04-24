@@ -51,7 +51,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
 # Copy the Isaac Lab directory (files to exclude are defined in .dockerignore)
 RUN --mount=type=cache,target=/var/cache/apt \
     cd ${DOCKER_USER_HOME} && \
-    git clone https://github.com/isaac-sim/IsaacLab.git isaaclab
+    git clone -b v2.1.0 https://github.com/isaac-sim/IsaacLab.git isaaclab
 
 # Set up a symbolic link between the installed Isaac Sim root folder and _isaac_sim in the Isaac Lab directory
 RUN ln -sf ${ISAACSIM_ROOT_PATH} ${ISAACLAB_PATH}/_isaac_sim
