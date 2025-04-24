@@ -144,8 +144,8 @@ class DroneVelocityAction(ActionTerm):
 
         # spin joints for visualisation
         self._rotor_velocities = self._rotor_throttle * self._directions * self._max_rotvel
-        self._asset.set_joint_velocity_target(
-            target=self._rotor_velocities,
+        self._asset.write_joint_velocity_to_sim(
+            velocity=self._rotor_velocities,
             joint_ids=self._rotor_joint_ids,
         )
 

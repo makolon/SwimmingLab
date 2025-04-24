@@ -46,9 +46,9 @@ HUMMINGBIRD_CFG = ArticulationCfg(
                 "rotor_2_joint",
                 "rotor_3_joint",
             ],
-            saturation_effort=1e6,
-            effort_limit=1e6,
-            velocity_limit=1e6,
+            saturation_effort=1e5,
+            effort_limit=1e5,
+            velocity_limit=1e5,
             stiffness={
                 "rotor_0_joint": 0.0,
                 "rotor_1_joint": 0.0,
