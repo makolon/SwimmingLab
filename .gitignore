@@ -169,6 +169,7 @@ cython_debug/
 # Logs
 **/videos/
 **/wandb/
+**/logs/
 
 # Models
 **/Props/USD/
