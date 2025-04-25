@@ -1,5 +1,7 @@
 from dataclasses import MISSING
 
+import torch
+
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.scene import InteractiveSceneCfg
@@ -56,6 +58,18 @@ class BaseSceneCfg(InteractiveSceneCfg):
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
+    )
+
+    # lidar
+    lidar = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base_link",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.0)),
+        attach_yaw_only=False,
+        pattern_cfg=patterns.BpearlPatternCfg(
+            vertical_ray_angles=torch.linspace(-10, 20, 4).tolist(),
+        ),
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
     )

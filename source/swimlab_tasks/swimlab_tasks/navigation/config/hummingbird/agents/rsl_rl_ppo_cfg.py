@@ -4,11 +4,12 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 
 
 @configclass
-class FireFlyPlainNavigationPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class HummingBirdPlaneNavigationPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 1500
     save_interval = 50
-    experiment_name = "firefly_navigation"
+    clip_actions = 1.0
+    experiment_name = "hummingbird_navigation"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
@@ -33,10 +34,11 @@ class FireFlyPlainNavigationPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
-class FireFlyLivingRoomNavigationPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class HummingBirdLivingRoomNavigationPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 1500
     save_interval = 50
+    clip_actions = 1.0
     experiment_name = "firefly_navigation"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(

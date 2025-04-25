@@ -62,6 +62,11 @@ class LeeAction(ActionTerm):
         # constant world-frame Z axis for torque computation
         self._z_axis = torch.tensor([0.0, 0.0, 1.0], device=self.device)
 
+        # initialise at hover
+        hover_throttle = torch.sqrt((self._mass * 9.81) / self._kf.sum()).clamp(max=1.0)
+        self._rotor_throttle[:] = hover_throttle
+        self._rotor_velocities[:] = hover_throttle * self._directions * self._max_rotvel
+
     @property
     def action_dim(self) -> int:
         return 4
