@@ -5,8 +5,8 @@ import torch
 from isaaclab.utils import math as math_utils
 
 if TYPE_CHECKING:  # circular-import safe
-    from .lee_position_controller_cfg import (
-        LeePositionControllerCfg,
+    from .lee_controller_cfg import (
+        LeeControllerCfg,
         AttitudeControllerCfg,
         RateControllerCfg,
     )
@@ -49,12 +49,12 @@ def compute_mixer_and_limits(
     return mixer, max_thrusts, mass, I_inv
 
 
-class LeePositionController:
-    """Full SE(3) Lee position controller (position + attitude + rate)."""
+class LeeController:
+    """Full SE(3) Lee position and velocity controller (position + attitude + rate)."""
 
     def __init__(
         self,
-        cfg: LeePositionControllerCfg,
+        cfg: LeeControllerCfg,
         rotor_params: dict,
         num_envs: int,
         device: str,
@@ -72,31 +72,43 @@ class LeePositionController:
         self.rate_gain = torch.as_tensor(cfg.angular_rate_gain, device=device) @ self.I_inv[:3, :3]
         self.g_vec = torch.tensor([0.0, 0.0, cfg.gravity], device=device)
 
+    """
+    Properties.
+    """
+
     @property
     def action_dim(self) -> int:  # high-level command dimension
         return 4
 
-    def reset(self, env_ids: torch.Tensor | None = None):
+    """
+    Operations.
+    """
+
+    def reset(self, env_ids: torch.Tensor = None):
+        """Reset the internals.
+
+        Args:
+            env_ids: The environment indices to reset. If None, then all environments are reset.
+        """
         pass
 
     def compute(
         self,
         root_state: torch.Tensor,
-        target_pos: Optional[torch.Tensor] = None,
-        target_vel: Optional[torch.Tensor] = None,
-        target_acc: Optional[torch.Tensor] = None,
-        target_yaw: Optional[torch.Tensor] = None,
+        target_cmd: torch.Tensor,
         body_rate: bool = False,
     ) -> torch.Tensor:
         bs, dev = root_state.shape[:-1], root_state.device
-        if target_pos is None:
-            target_pos = root_state[..., :3]
-        if target_vel is None:
-            target_vel = torch.zeros(*bs, 3, device=dev)
-        if target_acc is None:
-            target_acc = torch.zeros(*bs, 3, device=dev)
-        if target_yaw is None:
-            target_yaw = math_utils.quat_to_euler(root_state[..., 3:7])[..., -1:].unsqueeze(-1)
+        target_pos = root_state[..., :3]
+        target_vel = torch.zeros(*bs, 3, device=dev)
+        target_acc = torch.zeros(*bs, 3, device=dev)
+        if self.cfg.controller_type == "position":
+            target_pos = target_cmd[:, :3]
+        elif self.cfg.controller_type == "velocity":
+            target_vel = target_cmd[:, :3]
+        elif self.cfg.controller_type == "acceleration":
+            target_acc = target_cmd[:, :3]
+        target_yaw = target_cmd[:, 3:4]
 
         cmd = self._compute_impl(
             root_state.reshape(-1, 13),

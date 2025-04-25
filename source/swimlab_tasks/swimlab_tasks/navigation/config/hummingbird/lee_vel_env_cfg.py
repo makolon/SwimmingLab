@@ -2,8 +2,8 @@
 from isaaclab.envs.common import ViewerCfg
 from isaaclab.utils import configclass
 
-from swimlab.envs.mdp.actions.drone_actions_cfg import DroneVelocityActionCfg
-from swimlab.controllers.lee_position_controller_cfg import LeePositionControllerCfg
+from swimlab.envs.mdp.actions.lee_actions_cfg import LeeActionCfg
+from swimlab.controllers.lee_controller_cfg import LeeControllerCfg
 from swimlab_assets.hummingbird import HUMMINGBIRD_CFG
 from swimlab_scenes.base_scene_cfg import BaseSceneCfg
 from swimlab_scenes.living_room_scene_cfg import LivingRoomSceneCfg
@@ -31,7 +31,7 @@ class HummingBirdPlaneNavigationEnvCfg(NavigationBaseEnvCfg):
         # robot
         self.scene.robot = HUMMINGBIRD_CFG
 
-        self.actions.drone_action = DroneVelocityActionCfg(
+        self.actions.drone_action = LeeActionCfg(
             asset_name="robot",
             rotor_joint_names=[
                 "rotor_0_joint",
@@ -48,7 +48,8 @@ class HummingBirdPlaneNavigationEnvCfg(NavigationBaseEnvCfg):
             base_body_names=["base_link"],
             linear_scale=[1.0, 1.0, 1.0],
             yaw_scale=1.0,
-            controller=LeePositionControllerCfg(
+            controller=LeeControllerCfg(
+                controller_type="velocity",
                 gravity=9.81,
                 position_gain=[4.0, 4.0, 4.0],
                 velocity_gain=[2.2, 2.2, 2.2],
@@ -91,7 +92,7 @@ class HummingBirdLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
         # robot
         self.scene.robot = HUMMINGBIRD_CFG
 
-        self.actions.drone_action = DroneVelocityActionCfg(
+        self.actions.drone_action = LeeActionCfg(
             asset_name="robot",
             rotor_joint_names=[
                 "rotor_0_joint",
@@ -108,7 +109,8 @@ class HummingBirdLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
             base_body_names=["base_link"],
             linear_scale=[1.0, 1.0, 1.0],
             yaw_scale=1.0,
-            controller=LeePositionControllerCfg(
+            controller=LeeControllerCfg(
+                controller_type="velocity",
                 gravity=9.81,
                 position_gain=[4.0, 4.0, 4.0],
                 velocity_gain=[2.2, 2.2, 2.2],

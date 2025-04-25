@@ -1,2 +1,2 @@
-from .lee_position_controller import LeePositionController
-from .lee_position_controller_cfg import LeePositionControllerCfg
+from .lee_controller import LeeController
+from .lee_controller_cfg import LeeControllerCfg

@@ -4,31 +4,25 @@ from typing import Sequence, TYPE_CHECKING
 import torch
 from isaaclab.managers import ActionTerm
 from isaaclab.utils import math as math_utils
-from swimlab.controllers import LeePositionController
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
-    from . import actions_cfg
+    from . import rotor_actions_cfg
 
 
-class DroneVelocityAction(ActionTerm):
-    """Lee-controller velocity (+yaw) action → rotor forces/thrust for a multirotor."""
+class RotorAction(ActionTerm):
+    """Rotor position, velocity, acceleration (+yaw) action to rotor forces/thrust for a multirotor."""
 
-    cfg: actions_cfg.DroneVelocityActionCfg
+    cfg: rotor_actions_cfg.RotorActionCfg
     _asset: "Articulation"  # injected by ActionTerm
 
-    def __init__(self, cfg: actions_cfg.DroneVelocityActionCfg, env: ManagerBasedEnv):
+    def __init__(self, cfg: rotor_actions_cfg.RotorActionCfg, env: ManagerBasedEnv):
         super().__init__(cfg, env)
 
         # joint / body indices
         self._rotor_joint_ids, _ = self._asset.find_joints(cfg.rotor_joint_names)
         self._rotor_body_ids, _ = self._asset.find_bodies(cfg.rotor_body_names)
         self._base_body_ids, _ = self._asset.find_bodies(cfg.base_body_names)
-
-        # controller
-        self._controller = LeePositionController(
-            cfg.controller, cfg.rotor_params, num_envs=self.num_envs, device=self.device
-        )
 
         # action buffers
         self._raw_actions = torch.zeros(self.num_envs, 4, device=self.device)
@@ -39,8 +33,7 @@ class DroneVelocityAction(ActionTerm):
         self._yaw_scale = torch.tensor(cfg.yaw_scale, device=self.device).view(1, 1)
 
         # command storage
-        self._target_vel = torch.zeros(self.num_envs, 3, device=self.device)
-        self._target_yaw = torch.zeros(self.num_envs, 1, device=self.device)
+        self._target_cmd = torch.zeros(self.num_envs, 4, device=self.device)
 
         # rotor parameters
         self._num_rotors = torch.as_tensor(cfg.rotor_params["num_rotors"], device=self.device).view(1, -1)
@@ -81,27 +74,10 @@ class DroneVelocityAction(ActionTerm):
         self._processed_actions[:, 3:4] = actions[:, 3:4] * self._yaw_scale
         if self.cfg.clip is not None:
             self._processed_actions.clamp_(-self.cfg.clip, self.cfg.clip)
-        self._target_vel[:] = self._processed_actions[:, :3]
-        self._target_yaw[:] = self._processed_actions[:, 3:4]
+        self._target_cmd[:] = self._processed_actions[:, :4]
 
     def apply_actions(self) -> torch.Tensor:
-        root_state = torch.cat(
-            [
-                self._asset.data.root_pos_w,
-                self._asset.data.root_quat_w,
-                self._asset.data.root_vel_w[:, :3],
-                self._asset.data.root_vel_w[:, 3:],
-            ],
-            dim=-1,
-        )
-
-        rotor_cmd = self._controller.compute(
-            root_state=root_state,
-            target_vel=self._target_vel,
-            target_yaw=self._target_yaw,
-        ).clamp_(-1.0, 1.0)
-
-        target_thr = torch.sqrt(torch.clamp((rotor_cmd + 1.0) * 0.5, 0.0, 1.0))
+        target_thr = torch.sqrt(torch.clamp((self._target_cmd + 1.0) * 0.5, 0.0, 1.0))
         tau = torch.where(target_thr > self._rotor_throttle, self._tau_up, self._tau_down).clamp_(0.0, 1.0)
         self._rotor_throttle += tau * (target_thr - self._rotor_throttle)
 
@@ -154,8 +130,7 @@ class DroneVelocityAction(ActionTerm):
             env_ids = slice(None)
         self._raw_actions[env_ids] = 0.0
         self._processed_actions[env_ids] = 0.0
-        self._target_vel[env_ids] = 0.0
-        self._target_yaw[env_ids] = 0.0
+        self._target_cmd[env_ids] = 0.0
         self._rotor_throttle[env_ids] = 0.0
         self._rotor_velocities[env_ids] = 0.0
         self._rotor_thrusts[env_ids] = 0.0

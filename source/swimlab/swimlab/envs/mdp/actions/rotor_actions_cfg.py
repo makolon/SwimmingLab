@@ -3,14 +3,13 @@ from typing import Sequence, Tuple
 
 from isaaclab.managers.action_manager import ActionTerm, ActionTermCfg
 from isaaclab.utils import configclass
-from swimlab.controllers import LeePositionControllerCfg
-from swimlab.envs.mdp.actions import drone_actions
+from swimlab.envs.mdp.actions import rotor_actions
 
 
 @configclass
-class DroneVelocityActionCfg(ActionTermCfg):
-    """Config for velocity + yaw rate action mapped through LeePositionController."""
-    class_type: type[ActionTerm] = drone_actions.DroneVelocityAction
+class RotorActionCfg(ActionTermCfg):
+    """Config for position, velocity, acceleration + yaw rate action mapped."""
+    class_type: type[ActionTerm] = rotor_actions.RotorAction
 
     rotor_joint_names: list[str] = MISSING
     """List of rotor joint names or regex expressions that the action will be mapped to."""
@@ -22,8 +21,6 @@ class DroneVelocityActionCfg(ActionTermCfg):
     """Scale factor for the linear velocity scale. Defaults to (1.0, 1.0, 1.0)."""
     yaw_scale: float = 1.0
     """Scale factor for the yaw velocity targets. Defaults to 1.0."""
-    controller: LeePositionControllerCfg = MISSING
-    """The configuration for the lee position controller."""
     rotor_params: dict[str, float] | None = None
     """Parameters for the thrust and body force / torque calculation. Defauls to None, in which case the default parameters for the method are use."""
 
@@ -48,3 +45,4 @@ class DroneVelocityActionCfg(ActionTermCfg):
         if self.rotor_params is not None:
             rotor_params.update(self.rotor_params)
         self.rotor_params = rotor_params
+

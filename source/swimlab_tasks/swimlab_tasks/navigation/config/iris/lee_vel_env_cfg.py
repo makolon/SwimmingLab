@@ -1,8 +1,8 @@
 from isaaclab.envs.common import ViewerCfg
 from isaaclab.utils import configclass
 
-from swimlab.envs.mdp.actions.drone_actions_cfg import DroneVelocityActionCfg
-from swimlab.controllers.lee_position_controller_cfg import LeePositionControllerCfg
+from swimlab.envs.mdp.actions.lee_actions_cfg import LeeActionCfg
+from swimlab.controllers.lee_controller_cfg import LeeControllerCfg
 from swimlab_assets.iris import IRIS_CFG
 from swimlab_scenes.base_scene_cfg import BaseSceneCfg
 from swimlab_scenes.living_room_scene_cfg import LivingRoomSceneCfg
@@ -30,7 +30,7 @@ class IRISPlaneNavigationEnvCfg(NavigationBaseEnvCfg):
         # robot
         self.scene.robot = IRIS_CFG
 
-        self.actions.drone_action = DroneVelocityActionCfg(
+        self.actions.drone_action = LeeActionCfg(
             asset_name="robot",
             rotor_joint_names=[
                 "rotor_0_joint",
@@ -47,7 +47,8 @@ class IRISPlaneNavigationEnvCfg(NavigationBaseEnvCfg):
             base_body_names=["base_link"],
             linear_scale=[1.0, 1.0, 1.0],
             yaw_scale=1.0,
-            controller=LeePositionControllerCfg(
+            controller=LeeControllerCfg(
+                controller_type="velocity",
                 gravity=9.81,
                 position_gain=[6.0, 6.0, 6.0],
                 velocity_gain=[4.7, 4.7, 4.7],
@@ -90,7 +91,7 @@ class IRISLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
         # robot
         self.scene.robot = IRIS_CFG
 
-        self.actions.drone_action = mdp.DroneVelocityActionCfg(
+        self.actions.drone_action = LeeActionCfg(
             asset_name="robot",
             rotor_joint_names=[
                 "rotor_0_joint",
@@ -107,7 +108,8 @@ class IRISLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
             base_body_names=["base_link"],
             linear_scale=[1.0, 1.0, 1.0],
             yaw_scale=1.0,
-            controller=LeePositionControllerCfg(
+            controller=LeeControllerCfg(
+                controller_type="velocity",
                 gravity=9.81,
                 position_gain=[4.0, 4.0, 4.0],
                 velocity_gain=[2.2, 2.2, 2.2],
@@ -122,11 +124,11 @@ class IRISLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
                 "moment_constants": [1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07],
                 "kf": [6.11-8] * 4,
                 "km": [1.5e-9] * 4,
-                "directions": [1.0, -1.0, 1.0, -1.0],
+                "directions": [1.0, 1.0, -1.0, -1.0],
                 "max_rotation_velocities": [838, 838, 838, 838],
                 "mass": 1.52,
                 "inertia": {"xx": 0.0347563, "xy": 0.0, "xz": 0.0, "yy": 0.0458929, "yz": 0.0, "zz": 0.0977},
-                "drag_coef": 0.1,
+                "drag_coef": 0.2,
                 "tau_up": [0.43] * 4,
                 "tau_down": [0.43] * 4,
             }

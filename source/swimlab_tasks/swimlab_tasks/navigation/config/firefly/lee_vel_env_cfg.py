@@ -2,8 +2,8 @@
 from isaaclab.envs.common import ViewerCfg
 from isaaclab.utils import configclass
 
-from swimlab.envs.mdp.actions.drone_actions_cfg import DroneVelocityActionCfg
-from swimlab.controllers.lee_position_controller_cfg import LeePositionControllerCfg
+from swimlab.envs.mdp.actions.lee_actions_cfg import LeeActionCfg
+from swimlab.controllers.lee_controller_cfg import LeeControllerCfg
 from swimlab_assets.firefly import FIREFLY_CFG
 from swimlab_scenes.base_scene_cfg import BaseSceneCfg
 from swimlab_scenes.living_room_scene_cfg import LivingRoomSceneCfg
@@ -31,7 +31,7 @@ class FireFlyPlaneNavigationEnvCfg(NavigationBaseEnvCfg):
         # robot
         self.scene.robot = FIREFLY_CFG
 
-        self.actions.drone_action = DroneVelocityActionCfg(
+        self.actions.drone_action = LeeActionCfg(
             asset_name="robot",
             rotor_joint_names=[
                 "rotor_0_joint",
@@ -52,7 +52,8 @@ class FireFlyPlaneNavigationEnvCfg(NavigationBaseEnvCfg):
             base_body_names=["base_link"],
             linear_scale=[1.0, 1.0, 1.0],
             yaw_scale=1.0,
-            controller=LeePositionControllerCfg(
+            controller=LeeControllerCfg(
+                controller_type="velocity",
                 gravity=9.81,
                 position_gain=[6.0, 6.0, 6.0],
                 velocity_gain=[4.7, 4.7, 4.7],
@@ -95,7 +96,7 @@ class FireFlyLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
         # robot
         self.scene.robot = FIREFLY_CFG
 
-        self.actions.drone_action = mdp.DroneVelocityActionCfg(
+        self.actions.drone_action = mdp.LeeActionCfg(
             asset_name="robot",
             rotor_joint_names=[
                 "rotor_0_joint",
@@ -116,26 +117,27 @@ class FireFlyLivingRoomNavigationEnvCfg(NavigationBaseEnvCfg):
             base_body_names=["base_link"],
             linear_scale=[1.0, 1.0, 1.0],
             yaw_scale=1.0,
-            controller=LeePositionControllerCfg(
+            controller=LeeControllerCfg(
+                controller_type="velocity",
                 gravity=9.81,
-                position_gain=[4.0, 4.0, 4.0],
-                velocity_gain=[2.2, 2.2, 2.2],
-                attitude_gain=[0.7, 0.7, 0.035],
-                angular_rate_gain=[0.1, 0.1, 0.025],
+                position_gain=[6.0, 6.0, 6.0],
+                velocity_gain=[4.7, 4.7, 4.7],
+                attitude_gain=[3.0, 3.0, 0.15],
+                angular_rate_gain=[0.52, 0.52, 0.18],
             ),
             rotor_params={
                 "num_rotors": 6,
-                "rotor_angles": [-0.533708, 2.565218, 0.533708, -2.565218],
-                "arm_lengths": [0.255539, 0.238537, 0.238539, 0.238537],
-                "force_constants": [8.54858e-06, 8.54858e-06, 8.54858e-06, 8.54858e-06],
-                "moment_constants": [1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07],
+                "rotor_angles": [0.52359877559, 1.57079632679, 2.61799387799, -2.61799387799, -1.57079632679, -0.52359877559],
+                "arm_lengths": [0.215, 0.215, 0.215, 0.215, 0.215, 0.215],
+                "force_constants": [8.54858e-06, 8.54858e-06, 8.54858e-06, 8.54858e-06, 8.54858e-06, 8.54858e-06],
+                "moment_constants": [1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07, 1.3677728816219314e-07],
                 "kf": [6.11-8] * 6,
                 "km": [1.5e-9] * 6,
-                "directions": [1.0, -1.0, 1.0, -1.0],
-                "max_rotation_velocities": [838, 838, 838, 838],
-                "mass": 1.52,
+                "directions": [1.0, -1.0, 1.0, -1.0, 1.0, -1.0],
+                "max_rotation_velocities": [838, 838, 838, 838, 838, 838],
+                "mass": 1.56779,
                 "inertia": {"xx": 0.0347563, "xy": 0.0, "xz": 0.0, "yy": 0.0458929, "yz": 0.0, "zz": 0.0977},
-                "drag_coef": 0.1,
+                "drag_coef": 0.3,
                 "tau_up": [0.43] * 6,
                 "tau_down": [0.43] * 6,
             }
