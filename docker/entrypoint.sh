@@ -8,7 +8,6 @@
 SOURCE_LAB="$SWIMLAB_PATH/source/swimlab"
 SOURCE_ASSETS="$SWIMLAB_PATH/source/swimlab_assets"
 SOURCE_NAVIGATION="$SWIMLAB_PATH/source/swimlab_navigation"
-SOURCE_RL="$SWIMLAB_PATH/source/swimlab_rl"
 SOURCE_SCENES="$SWIMLAB_PATH/source/swimlab_scenes"
 SOURCE_TASKS="$SWIMLAB_PATH/source/swimlab_tasks"
 
@@ -36,9 +35,6 @@ install_source "$SOURCE_ASSETS"
 
 # Install swimlab_navigation
 install_source "$SOURCE_NAVIGATION"
-
-# Install swimlab_rl
-install_source "$SOURCE_RL"
 
 # Install swimlab_scenes
 install_source "$SOURCE_SCENES"
