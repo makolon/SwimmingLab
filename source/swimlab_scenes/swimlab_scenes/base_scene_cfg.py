@@ -5,7 +5,7 @@ import torch
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import CameraCfg, ContactSensorCfg, ImuCfg, RayCasterCfg
+from isaaclab.sensors import TiledCameraCfg, ContactSensorCfg, ImuCfg, RayCasterCfg
 from isaaclab.sensors.ray_caster import patterns
 from isaaclab.sim.spawners.materials import RigidBodyMaterialCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg
@@ -13,10 +13,6 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 
-##
-# Pre-defined config
-##
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 
 ##
 # Scene definition
@@ -50,6 +46,27 @@ class BaseSceneCfg(InteractiveSceneCfg):
             texture_scale=(0.25, 0.25),
         ),
         debug_vis=False,
+    )
+
+    # camera
+    camera: TiledCameraCfg = TiledCameraCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base_link/Camera",
+        update_period=0.0,
+        height=480,
+        width=640,
+        data_types=["rgb", "distance_to_image_plane"],
+        spawn=sim_utils.PinholeCameraCfg(
+            focus_distance=400.0,
+            focal_length=1.66,  # NOTE: (640/2) / tan(1.047/2)
+            horizontal_aperture=1.89,  # NOTE: 640 * 0.003
+            vertical_aperture=1.44,  # NOTE: 480 * 0.003
+            clipping_range=(0.01, 1.0e3),
+        ),
+        offset=TiledCameraCfg.OffsetCfg(
+            pos=(0.0, 0.0, -0.1),
+            rot=(0.5, -0.5, 0.5, -0.5),
+            convention="ros",
+        ),
     )
 
     # height scanner
