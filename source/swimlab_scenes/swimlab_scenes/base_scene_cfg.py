@@ -55,6 +55,7 @@ class BaseSceneCfg(InteractiveSceneCfg):
         height=480,
         width=640,
         data_types=["rgb", "distance_to_image_plane"],
+        update_latest_camera_pose=True,
         spawn=sim_utils.PinholeCameraCfg(
             focus_distance=400.0,
             focal_length=1.66,  # NOTE: (640/2) / tan(1.047/2)

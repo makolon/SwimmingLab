@@ -7,7 +7,6 @@ import numpy as np
 import cv2
 import gdown
 import torch
-import torchvision.transforms as transforms
 
 import clip
 
@@ -22,10 +21,9 @@ from swimlab_navigation.vlmaps.utils.mapping_utils import (
     pos2grid_id,
     project_point,
 )
-from swimlab_navigation.vlmaps.lseg.modules.models.lseg_net import LSegEncNet
 from swimlab_navigation.vlmaps.lseg.additional_utils.models import resize_image, pad_image, crop_image
 
-parser = argparse.ArgumentParser(description="Generate LSeg-based VLMaps.")
+parser = argparse.ArgumentParser(description="Debug map consturction.")
 parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory containing rgb, depth, pose folders.")
 parser.add_argument("--camera_height", type=float, default=1.5, help="Height of the camera above ground.")
 parser.add_argument("--cs", type=float, default=0.05, help="Cell size (meters) for top-down map grid.")
@@ -34,94 +32,7 @@ parser.add_argument("--depth_sample_rate", type=int, default=100, help="Subsampl
 args_cli = parser.parse_args()
 
 
-def get_lseg_feat(
-    model: LSegEncNet,
-    image: np.ndarray,
-    labels: np.ndarray,
-    transform: np.ndarray,
-    crop_size: int = 480,
-    base_size: int = 520,
-    norm_mean: list[float] = [0.5, 0.5, 0.5],
-    norm_std: list[float] = [0.5, 0.5, 0.5],
-):
-    vis_image = image.copy()
-    image = transform(image).unsqueeze(0).cuda()
-    img = image[0].permute(1,2,0)
-    img = img * 0.5 + 0.5
-    
-    batch, _, h, w = image.size()
-    stride_rate = 2.0 / 3.0
-    stride = int(crop_size * stride_rate)
-
-    long_size = base_size
-    if h > w:
-        height = long_size
-        width = int(1.0 * w * long_size / h + 0.5)
-        short_size = width
-    else:
-        width = long_size
-        height = int(1.0 * h * long_size / w + 0.5)
-        short_size = height
-
-    cur_img = resize_image(image, height, width, **{'mode': 'bilinear', 'align_corners': True})
-
-    if long_size <= crop_size:
-        pad_img = pad_image(cur_img, norm_mean,
-                            norm_std, crop_size)
-        print(pad_img.shape)
-        with torch.no_grad():
-            outputs, logits = model(pad_img, labels)
-        outputs = crop_image(outputs, 0, height, 0, width)
-    else:
-        if short_size < crop_size:
-            # pad if needed
-            pad_img = pad_image(cur_img, norm_mean, norm_std, crop_size)
-        else:
-            pad_img = cur_img
-        _, _, ph, pw = pad_img.shape
-        assert(ph >= height and pw >= width)
-        h_grids = int(math.ceil(1.0 * (ph-crop_size)/stride)) + 1
-        w_grids = int(math.ceil(1.0 * (pw-crop_size)/stride)) + 1
-        with torch.cuda.device_of(image):
-            with torch.no_grad():
-                outputs = image.new().resize_(batch, model.out_c, ph, pw).zero_().cuda()
-                logits_outputs = image.new().resize_(batch, len(labels), ph, pw).zero_().cuda()
-            count_norm = image.new().resize_(batch, 1, ph, pw).zero_().cuda()
-
-        # grid evaluation
-        for idh in range(h_grids):
-            for idw in range(w_grids):
-                h0 = idh * stride
-                w0 = idw * stride
-                h1 = min(h0 + crop_size, ph)
-                w1 = min(w0 + crop_size, pw)
-                crop_img = crop_image(pad_img, h0, h1, w0, w1)
-
-                # pad if needed
-                pad_crop_img = pad_image(crop_img, norm_mean, norm_std, crop_size)
-                with torch.no_grad():
-                    output, logits = model(pad_crop_img, labels)
-                cropped = crop_image(output, 0, h1-h0, 0, w1-w0)
-                cropped_logits = crop_image(logits, 0, h1-h0, 0, w1-w0)
-                outputs[:, :, h0:h1, w0:w1] += cropped
-                logits_outputs[:, :, h0:h1, w0:w1] += cropped_logits
-                count_norm[:, :, h0:h1, w0:w1] += 1
-
-        assert((count_norm==0).sum()==0)
-        outputs = outputs / count_norm
-        logits_outputs = logits_outputs / count_norm
-        outputs = outputs[:, :, :height, :width]
-        logits_outputs = logits_outputs[:, :, :height, :width]
-
-    outputs = outputs.cpu()
-    outputs = outputs.numpy() # B, D, H, W
-    predicts = [torch.max(logit, 0)[1].cpu().numpy() for logit in logits_outputs]
-    pred = predicts[0]
-
-    return outputs
-
-
-def create_lseg_map_batch(
+def debug_map(
     dataset_dir,
     camera_height: float,
     cs: float = 0.05,
@@ -132,62 +43,10 @@ def create_lseg_map_batch(
 
     crop_size = 480 # 480
     base_size = 520 # 520
-    lang = "door,chair,ground,ceiling,other"
-    labels = lang.split(",")
-
-    # loading models
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    clip_version = "ViT-B/32"
-    clip_feat_dim = {
-        'RN50': 1024, 'RN101': 512, 'RN50x4': 640, 'RN50x16': 768,
-        'RN50x64': 1024, 'ViT-B/32': 512, 'ViT-B/16': 512, 'ViT-L/14': 768
-    }[clip_version]
-    print("Loading CLIP model...")
-    clip_model, preprocess = clip.load(clip_version)
-    clip_model.to(device).eval()
-    lang_token = clip.tokenize(labels)
-    lang_token = lang_token.to(device)
-
-    with torch.no_grad():
-        text_feats = clip_model.encode_text(lang_token)
-        text_feats = text_feats / text_feats.norm(dim=-1, keepdim=True)
-
-    text_feats = text_feats.cpu().numpy()
-    model = LSegEncNet(
-        lang,
-        arch_option=0,
-        block_depth=0,
-        activation='lrelu',
-        crop_size=crop_size
-    )
-    model_state_dict = model.state_dict()
-
-    # Downlaod checkpoint
-    checkpoint_dir = Path(__file__).resolve().parents[1] / "navigation" / "lseg" / "checkpoints"
-    checkpoint_path = checkpoint_dir / "demo_e200.ckpt"
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    if not checkpoint_path.exists():
-        print("Downloading LSeg checkpoint...")
-        checkpoint_url = "https://drive.google.com/u/0/uc?id=1ayk6NXURI_vIPlym16f_RG3ffxBWHxvb"
-        gdown.download(checkpoint_url, output=str(checkpoint_path))
-
-    pretrained_state_dict = torch.load(checkpoint_path)
-    pretrained_state_dict = {k.lstrip('net.'): v for k, v in pretrained_state_dict['state_dict'].items()}
-    model_state_dict.update(pretrained_state_dict)
-    model.load_state_dict(pretrained_state_dict)
-
-    model.eval()
-    model = model.cuda()
 
     norm_mean= [0.5, 0.5, 0.5]
     norm_std = [0.5, 0.5, 0.5]
     padding = [0.0] * 3
-    transform = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
-        ]
-    )
 
     print(f"loading scene {dataset_dir}")
     rgb_dir = os.path.join(dataset_dir, "rgb")
@@ -208,7 +67,6 @@ def create_lseg_map_batch(
     map_save_dir = os.path.join(dataset_dir, "map")
     os.makedirs(map_save_dir, exist_ok=True)
     color_top_down_save_path = os.path.join(map_save_dir, f"color_top_down_{mask_version}.npy")
-    gt_save_path = os.path.join(map_save_dir, f"grid_{mask_version}_gt.npy")
     grid_save_path = os.path.join(map_save_dir, f"grid_lseg_{mask_version}.npy")
     weight_save_path = os.path.join(map_save_dir, f"weight_lseg_{mask_version}.npy")
     obstacles_save_path = os.path.join(map_save_dir, "obstacles.npy")
@@ -216,16 +74,9 @@ def create_lseg_map_batch(
     # initialize a grid with zero position at the center
     color_top_down_height = (camera_height + 1) * np.ones((gs, gs), dtype=np.float32)
     color_top_down = np.zeros((gs, gs, 3), dtype=np.uint8)
-    gt = np.zeros((gs, gs), dtype=np.int32)
     grid = np.zeros((gs, gs, clip_feat_dim), dtype=np.float32)
     obstacles = np.ones((gs, gs), dtype=np.uint8)
     weight = np.zeros((gs, gs), dtype=float)
-
-    save_map(color_top_down_save_path, color_top_down)
-    save_map(gt_save_path, gt)
-    save_map(grid_save_path, grid)
-    save_map(weight_save_path, weight)
-    save_map(obstacles_save_path, obstacles)
 
     tf_list = []
 
@@ -258,9 +109,6 @@ def create_lseg_map_batch(
 
         tf = init_tf_inv @ pose
 
-
-        pix_feats = get_lseg_feat(model, rgb, labels, transform, crop_size, base_size, norm_mean, norm_std)
-
         # transform all points to the global frame
         pc, mask = depth2pc(depth)
         shuffle_mask = np.arange(pc.shape[1]) 
@@ -271,8 +119,8 @@ def create_lseg_map_batch(
         pc = pc[:, mask]
         pc_global = transform_pc(pc, tf)
 
-        rgb_cam_mat = get_sim_cam_mat(rgb.shape[0], rgb.shape[1])
-        feat_cam_mat = get_sim_cam_mat(pix_feats.shape[2], pix_feats.shape[3])
+        rgb_cam_mat = get_sim_cam_mat(rgb.shape[0], rgb.shape[1])  # TODO: Fix this
+        feat_cam_mat = get_sim_cam_mat(pix_feats.shape[2], pix_feats.shape[3])  # TODO: Fix this
 
         # project all point cloud onto the ground
         for i, (p, p_local) in enumerate(zip(pc_global.T, pc.T)):
@@ -305,14 +153,13 @@ def create_lseg_map_batch(
         pbar.update(1)
 
     save_map(color_top_down_save_path, color_top_down)
-    save_map(gt_save_path, gt)
     save_map(grid_save_path, grid)
     save_map(weight_save_path, weight)
     save_map(obstacles_save_path, obstacles)
 
 
 if __name__ == "__main__":
-    create_lseg_map_batch(
+    debug_map(
         args_cli.dataset_dir,
         camera_height=args_cli.camera_height,
         cs=args_cli.cs,

@@ -104,7 +104,7 @@ def main():
 
     # Create controller
     teleop_interface = Se3Keyboard(
-        pos_sensitivity=0.1 * args_cli.sensitivity, rot_sensitivity=0.05 * args_cli.sensitivity
+        pos_sensitivity=0.15 * args_cli.sensitivity, rot_sensitivity=0.05 * args_cli.sensitivity
     )
     teleop_interface.add_callback("R", stop_teleoperation)
     teleop_interface.add_callback("F", start_teleoperation)
@@ -117,6 +117,7 @@ def main():
     rgb_dataset, depth_dataset, pose_dataset = [], [], []
 
     # Execute simulation
+    episode_index = 0
     while simulation_app.is_running():
         with torch.inference_mode():
             # Get device command
@@ -157,14 +158,21 @@ def main():
 
                 if finish_recording:
                     # Save dataset
-                    np.save(os.path.join(args_cli.dataset_dir, "rgb"), rgb_dataset)
-                    np.save(os.path.join(agrs_cli.dataset_dir, "depth"), depth_dataset)
-                    np.save(os.path.join(args_cli.dataset_dir, "pose", pose_dataset))
+                    rgb_dataset_dir = os.path.join(args_cli.dataset_dir, "rgb")
+                    depth_dataset_dir = os.path.join(args_cli.dataset_dir, "depth")
+                    pose_dataset_dir = os.path.join(args_cli.dataset_dir, "pose")
+                    os.makedirs(rgb_dataset_dir, exist_ok=True)
+                    os.makedirs(depth_dataset_dir, exist_ok=True)
+                    os.makedirs(pose_dataset_dir, exist_ok=True)
+                    np.save(os.path.join(rgb_dataset_dir, f"rgb_{episode_index}.npy"), rgb_dataset)
+                    np.save(os.path.join(depth_dataset_dir, f"depth_{episode_index}.npy"), depth_dataset)
+                    np.save(os.path.join(pose_dataset_dir, f"pose_{episode_index}.npy"), pose_dataset)
 
                     # Reset simulation environment
                     env.reset()
                     finish_recording = False
                     rgb_dataset, depth_dataset, pose_dataset = [], [], []
+                    episode_index += 1
             else:
                 env.sim.render()
 

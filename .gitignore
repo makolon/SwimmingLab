@@ -171,6 +171,10 @@ cython_debug/
 **/wandb/
 **/logs/
 
+# Navigation
+**/checkpoints/
+**/dataset/
+
 # Models
 **/Props/USD/
 **/Props/URDF/

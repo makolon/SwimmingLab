@@ -228,7 +228,7 @@ def depth2pc(depth, fov=90, intr_mat=None, min_depth=0.1, max_depth=10):
     Return 3xN array and the mask of valid points in [min_depth, max_depth]
     """
 
-    h, w = depth.shape
+    h, w, _ = depth.shape
 
     cam_mat = intr_mat
     if intr_mat is None:
