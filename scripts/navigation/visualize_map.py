@@ -51,7 +51,6 @@ def visualize_maps(
     grid = grid[xmin:xmax+1, ymin:ymax+1]
 
     no_map_mask = obstacles[xmin:xmax+1, ymin:ymax+1] > 0
-    obstacles_rgb = np.repeat(obstacles[xmin:xmax+1, ymin:ymax+1, None], 3, axis=2)
     print(no_map_mask.shape)
 
     lang = "wall,box,beam"  # TODO: Fix this

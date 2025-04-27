@@ -16,7 +16,7 @@ from swimlab_navigation.vlmaps.utils.mapping_utils import (
     save_map,
     depth2pc,
     transform_pc,
-    get_sim_cam_mat,
+    get_sim_cam_mat_with_params,
     pos2grid_id,
     project_point,
 )
@@ -30,6 +30,36 @@ parser.add_argument("--cs", type=float, default=0.05, help="Cell size (meters) f
 parser.add_argument("--gs", type=int, default=1000, help="Grid size (number of cells per axis) for top-down map.")
 parser.add_argument("--depth_sample_rate", type=int, default=100, help="Subsampling rate for depth points.")
 args_cli = parser.parse_args()
+
+
+def convert_pose(pos: np.ndarray, quat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Convert pose from (x forward, y left, z up) to (x right, y down, z forward).
+
+    Args:
+        pos (np.ndarray): Position (3,) in meters.
+        quat (np.ndarray): Quaternion (4,) in (x, y, z, w) format.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: Transformed (position, quaternion).
+    """
+    assert pos.shape == (3,)
+    assert quat.shape == (4,)
+
+    # Flip the y-axis for position
+    pos_new = np.array([pos[0], -pos[1], pos[2]], dtype=np.float32)
+
+    # Convert quaternion to rotation matrix
+    rot_mat = R.from_quat(quat).as_matrix()
+
+    # Flip the y-axis for rotation matrix
+    flip_y = np.diag([1, -1, -1])
+    rot_mat_new = flip_y @ rot_mat @ flip_y
+
+    # Convert back to quaternion
+    quat_new = R.from_matrix(rot_mat_new).as_quat()
+
+    return pos_new, quat_new
 
 
 def get_lseg_feat(
@@ -202,7 +232,6 @@ def create_lseg_map_batch(
     map_save_dir = os.path.join(dataset_dir, "map")
     os.makedirs(map_save_dir, exist_ok=True)
     color_top_down_save_path = os.path.join(map_save_dir, f"color_top_down_{mask_version}.npy")
-    gt_save_path = os.path.join(map_save_dir, f"grid_{mask_version}_gt.npy")
     grid_save_path = os.path.join(map_save_dir, f"grid_lseg_{mask_version}.npy")
     weight_save_path = os.path.join(map_save_dir, f"weight_lseg_{mask_version}.npy")
     obstacles_save_path = os.path.join(map_save_dir, "obstacles.npy")
@@ -210,13 +239,11 @@ def create_lseg_map_batch(
     # initialize a grid with zero position at the center
     color_top_down_height = (camera_height + 1) * np.ones((gs, gs), dtype=np.float32)
     color_top_down = np.zeros((gs, gs, 3), dtype=np.uint8)
-    gt = np.zeros((gs, gs), dtype=np.int32)
     grid = np.zeros((gs, gs, clip_feat_dim), dtype=np.float32)
-    obstacles = np.ones((gs, gs), dtype=np.uint8)
     weight = np.zeros((gs, gs), dtype=float)
+    obstacles = np.ones((gs, gs), dtype=np.uint8)
 
     save_map(color_top_down_save_path, color_top_down)
-    save_map(gt_save_path, gt)
     save_map(grid_save_path, grid)
     save_map(weight_save_path, weight)
     save_map(obstacles_save_path, obstacles)
@@ -233,14 +260,10 @@ def create_lseg_map_batch(
     for data_sample in data_iter:
         rgb, depth, pose = data_sample
 
-        # rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
         pos, rot = pose[:3], pose[3:]
-        rot_mat = R.from_quat(rot).as_matrix()
-        rot_ro_cam = np.eye(3)
-        rot_ro_cam[1, 1] = -1
-        rot_ro_cam[2, 2] = -1
-        rot = rot_mat @ rot_ro_cam
+        pos, rot = convert_pose(pos, rot)
         pos[1] += camera_height
+        rot = R.from_quat(rot).as_matrix()
 
         pose = np.eye(4)
         pose[:3, :3] = rot
@@ -252,11 +275,25 @@ def create_lseg_map_batch(
 
         tf = init_tf_inv @ pose
 
-
         pix_feats = get_lseg_feat(model, rgb, labels, transform, crop_size, base_size, norm_mean, norm_std)
 
+        rgb_cam_mat = get_sim_cam_mat_with_params(
+            focal_length=1.66,
+            horizontal_aperture=1.89,
+            vertical_aperture=1.44,
+            width=640,
+            height=480,
+        )
+        feat_cam_mat = get_sim_cam_mat_with_params(
+            focal_length=1.66,
+            horizontal_aperture=1.89,
+            vertical_aperture=1.44,
+            width=pix_feats.shape[2],
+            height=pix_feats.shape[3]
+        )
+
         # transform all points to the global frame
-        pc, mask = depth2pc(depth)
+        pc, mask = depth2pc(depth, rgb_cam_mat)
         shuffle_mask = np.arange(pc.shape[1]) 
         np.random.shuffle(shuffle_mask)
         shuffle_mask = shuffle_mask[::depth_sample_rate]
@@ -264,9 +301,6 @@ def create_lseg_map_batch(
         pc = pc[:, shuffle_mask]
         pc = pc[:, mask]
         pc_global = transform_pc(pc, tf)
-
-        rgb_cam_mat = get_sim_cam_mat(rgb.shape[0], rgb.shape[1])
-        feat_cam_mat = get_sim_cam_mat(pix_feats.shape[2], pix_feats.shape[3])
 
         # project all point cloud onto the ground
         for i, (p, p_local) in enumerate(zip(pc_global.T, pc.T)):
@@ -299,7 +333,6 @@ def create_lseg_map_batch(
         pbar.update(1)
 
     save_map(color_top_down_save_path, color_top_down)
-    save_map(gt_save_path, gt)
     save_map(grid_save_path, grid)
     save_map(weight_save_path, weight)
     save_map(obstacles_save_path, obstacles)

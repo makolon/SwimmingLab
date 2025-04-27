@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Sequence, TYPE_CHECKING
 
 import torch
+from isaaclab.assets import Articulation
 from isaaclab.managers import ActionTerm
 from isaaclab.utils import math as math_utils
 from swimlab.controllers import LeeController
@@ -15,7 +16,7 @@ class LeeAction(ActionTerm):
     """Lee-controller position, velocity, acceleration (+yaw) action to rotor forces/thrust for a multirotor."""
 
     cfg: lee_actions_cfg.LeeActionCfg
-    _asset: "Articulation"  # injected by ActionTerm
+    _asset: Articulation  # injected by ActionTerm
 
     def __init__(self, cfg: lee_actions_cfg.LeeActionCfg, env: ManagerBasedEnv):
         super().__init__(cfg, env)

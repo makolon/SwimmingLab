@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING
 
 import torch
 from isaaclab.utils import math as math_utils

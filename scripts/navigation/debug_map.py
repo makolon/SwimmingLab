@@ -3,7 +3,6 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
-import open3d as o3d
 
 from tqdm import tqdm
 from scipy.spatial.transform import Rotation as R
@@ -11,6 +10,7 @@ from swimlab_navigation.vlmaps.utils.mapping_utils import (
     depth2pc,
     transform_pc,
     get_sim_cam_mat,
+    get_sim_cam_mat_with_params,
     pos2grid_id,
     project_point,
 )
@@ -26,8 +26,7 @@ args_cli = parser.parse_args()
 
 def convert_pose(pos: np.ndarray, quat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
-    Convert pose (position and orientation) from (x forward, y right, z up) 
-    to (x right, y down, z forward).
+    Convert pose from (x forward, y left, z up) to (x right, y down, z forward).
 
     Args:
         pos (np.ndarray): Position (3,) in meters.
@@ -36,16 +35,21 @@ def convert_pose(pos: np.ndarray, quat: np.ndarray) -> tuple[np.ndarray, np.ndar
     Returns:
         tuple[np.ndarray, np.ndarray]: Transformed (position, quaternion).
     """
-    assert pos.shape == (3,), f"Input position must be of shape (3,), but got {pos.shape}"
-    assert quat.shape == (4,), f"Input quaternion must be of shape (4,), but got {quat.shape}"
+    assert pos.shape == (3,)
+    assert quat.shape == (4,)
 
-    rot = R.from_quat(quat).as_euler("xyz")
-    roll, pitch, yaw = rot[0], rot[1], rot[2]
-    rot_new = np.array([pitch, -yaw, roll], dtype=np.float32)
-    pos_new = np.array([pos[1], -pos[2], pos[0]])
+    # Flip the y-axis for position
+    pos_new = np.array([pos[0], -pos[1], pos[2]], dtype=np.float32)
 
-    rot_new = R.from_euler("xyz", rot_new)
-    quat_new = rot_new.as_quat()
+    # Convert quaternion to rotation matrix
+    rot_mat = R.from_quat(quat).as_matrix()
+
+    # Flip the y-axis for rotation matrix
+    flip_y = np.diag([1, -1, -1])
+    rot_mat_new = flip_y @ rot_mat @ flip_y
+
+    # Convert back to quaternion
+    quat_new = R.from_matrix(rot_mat_new).as_quat()
 
     return pos_new, quat_new
 
@@ -96,7 +100,6 @@ def debug_map(
         pos, rot = pose[:3], pose[3:]
         pos, rot = convert_pose(pos, rot)
         pos[1] += camera_height
-        print("pos: {}, rot: {}".format(pos, rot))
         rot = R.from_quat(rot).as_matrix()
 
         pose = np.eye(4)
@@ -109,8 +112,10 @@ def debug_map(
 
         tf = init_tf_inv @ pose
 
+        rgb_cam_mat = get_sim_cam_mat(640, 480)
+
         # transform all points to the global frame
-        pc, mask = depth2pc(depth)
+        pc, mask = depth2pc(depth, rgb_cam_mat)
         shuffle_mask = np.arange(pc.shape[1]) 
         np.random.shuffle(shuffle_mask)
         shuffle_mask = shuffle_mask[::depth_sample_rate]
@@ -118,8 +123,6 @@ def debug_map(
         pc = pc[:, shuffle_mask]
         pc = pc[:, mask]
         pc_global = transform_pc(pc, tf)
-
-        rgb_cam_mat = get_sim_cam_mat(rgb.shape[0], rgb.shape[1])
 
         # project all point cloud onto the ground
         for i, (p, p_local) in enumerate(zip(pc_global.T, pc.T)):
@@ -131,6 +134,8 @@ def debug_map(
                 continue
 
             rgb_px, rgb_py, rgb_pz = project_point(rgb_cam_mat, p_local)
+            if not (0 <= rgb_px < rgb.shape[1] and 0 <= rgb_py < rgb.shape[0]):
+                continue
             rgb_v = rgb[rgb_py, rgb_px, :]
 
             # when the projected location is already assigned a color value before, overwrite if the current point has larger height
@@ -156,7 +161,7 @@ def debug_map(
 
         save_dir = os.path.join(map_save_dir, "viz")
         os.makedirs(save_dir, exist_ok=True)
-        plt.savefig(os.path.join(save_dir, "map_step.png")
+        plt.savefig(os.path.join(save_dir, "map_step.png"))
 
 
 if __name__ == "__main__":
@@ -167,3 +172,4 @@ if __name__ == "__main__":
         gs=args_cli.gs,
         depth_sample_rate=args_cli.depth_sample_rate,
     )
+

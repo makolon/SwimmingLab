@@ -52,16 +52,6 @@ def main():
     print(f"[INFO]: Gym observation space: {env.observation_space}")
     print(f"[INFO]: Gym action space: {env.action_space}")
 
-    if args_cli.headless:
-        if args_cli.renderer == "PathTracing":
-            # Set the renderer to PathTracing
-            viewport_api = get_active_viewport()
-            viewport_api.set_hd_engine("rtx", "PathTracing")
-        elif args_cli.renderer == "RaytracedLighting":
-            # Set the renderer to PathTracing
-            viewport_api = get_active_viewport()
-            viewport_api.set_hd_engine("rtx", "RaytracedLighting")
-
     if args_cli.video:
         # Record video
         video_kwargs = {

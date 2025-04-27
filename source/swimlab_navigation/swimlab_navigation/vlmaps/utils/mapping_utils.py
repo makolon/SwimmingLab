@@ -12,7 +12,7 @@ import matplotlib.patches as mpatches
 from PIL import Image
 from scipy.spatial.transform import Rotation as R
 import h5py
-from typing import List, Dict, Tuple, Set, Union
+from typing import List, Tuple, Set, Union
 
 
 def cvt_pose_vec2tf(pos_quat_vec: np.ndarray) -> np.ndarray:
@@ -41,7 +41,6 @@ def load_real_world_poses(pose_filepath):
         for line in f:
             row = [float(x) for x in line.strip().split()]
             id = int(row[-1])
-            timestamp = row[0]
             pos = np.array(row[1:4])
             quat_xyzw = np.array(row[4:8])
             r = R.from_quat(quat_xyzw)
@@ -142,8 +141,6 @@ def resize_feat(feat, h, w):
     """
     Input: feat (B, F, H, W). B is batch size, F is feature dimension, H, W are height and width
     """
-    # b, f, _, _ = feat.shape
-    # feat = np.resize(feat, (b, f, h, w))
     feat = torch.tensor(feat)
     feat = torch.nn.functional.interpolate(feat, (h, w), **{"mode": "bilinear", "align_corners": True})
     feat = feat.numpy()
@@ -163,13 +160,9 @@ def depth2pc_ai2thor(depth, clipping_dist=0.1, fov=90):
     cam_mat_inv = np.linalg.inv(cam_mat)
 
     y, x = np.meshgrid(np.arange(h), np.arange(w), indexing="ij")
-    # x = x[int(h/2)].reshape((1, -1))
-    # y = y[int(h/2)].reshape((1, -1))
-    # z = depth[int(h/2)].reshape((1, -1))
 
     x = x.reshape((1, -1))[:, :]
     y = y.reshape((1, -1))[:, :]
-    # z = depth.reshape((1, -1))[:, :] + clipping_dist
     z = depth.reshape((1, -1))[:, :]
 
     p_2d = np.vstack([x, y, np.ones_like(x)])
@@ -178,7 +171,6 @@ def depth2pc_ai2thor(depth, clipping_dist=0.1, fov=90):
     mask = pc[2, :] > 0.1
     mask2 = pc[2, :] < 10
     mask = np.logical_and(mask, mask2)
-    # pc = pc[:, mask]
     return pc, mask
 
 
@@ -191,10 +183,6 @@ def depth2pc_real_world(depth, cam_mat):
     cam_mat_inv = np.linalg.inv(cam_mat)
 
     y, x = np.meshgrid(np.arange(h), np.arange(w), indexing="ij")
-    # x = x[int(h/2)].reshape((1, -1))
-    # y = y[int(h/2)].reshape((1, -1))
-    # z = depth[int(h/2)].reshape((1, -1))
-
     x = x.reshape((1, -1))[:, :]
     y = y.reshape((1, -1))[:, :]
     z = depth.reshape((1, -1))[:, :]
@@ -203,10 +191,8 @@ def depth2pc_real_world(depth, cam_mat):
     pc = cam_mat_inv @ p_2d
     pc = pc * z
     mask_1 = pc[2, :] > 0.1
-    # mask = mask_1
     mask_2 = pc[2, :] < 4
     mask = np.logical_and(mask_1, mask_2)
-    # pc = pc[:, mask]
     return pc, mask
 
 
@@ -223,29 +209,28 @@ def rgb2pc(rgb):
     return rgb_pc
 
 
-def depth2pc(depth, fov=90, intr_mat=None, min_depth=0.1, max_depth=10):
+def depth2pc(depth, intr_mat, min_depth=0.1, max_depth=10.0):
     """
-    Return 3xN array and the mask of valid points in [min_depth, max_depth]
+    Converts a depth map to a 3xN point cloud array (in camera coordinates).
     """
 
     h, w, _ = depth.shape
 
-    cam_mat = intr_mat
-    if intr_mat is None:
-        cam_mat = get_sim_cam_mat_with_fov(h, w, fov)
-    cam_mat_inv = np.linalg.inv(cam_mat)
+    fx = intr_mat[0, 0]
+    fy = intr_mat[1, 1]
+    cx = intr_mat[0, 2]
+    cy = intr_mat[1, 2]
 
     y, x = np.meshgrid(np.arange(h), np.arange(w), indexing="ij")
-    x = x.reshape((1, -1))[:, :] + 0.5
-    y = y.reshape((1, -1))[:, :] + 0.5
-    z = depth.reshape((1, -1))[:, :]
 
-    p_2d = np.vstack([x, y, np.ones_like(x)])
-    pc = cam_mat_inv @ p_2d
-    pc = pc * z
-    mask = pc[2, :] > min_depth
+    z = depth.reshape(-1)
+    x = (x.reshape(-1) - cx) * z / fx
+    y = (y.reshape(-1) - cy) * z / fy
 
-    mask = np.logical_and(mask, pc[2, :] < max_depth)
+    pc = np.stack((x, y, z), axis=0)
+
+    mask = (z > min_depth) & (z < max_depth)
+
     return pc, mask
 
 
@@ -428,7 +413,6 @@ def generate_mask(gs, cs, hfov, theta, depth, robot_x, robot_y):
 
     # get the angle of the end points
     w = depth.shape[1]
-    inc = hfov / float(w)
     angles = theta + hfov / 2.0 - np.arange(w) * hfov / w
 
     # get the list of end points positions
@@ -576,38 +560,18 @@ def get_sim_cam_mat(h, w):
     return cam_mat
 
 
-def get_camera_intrinsic_matrix(
-    width: int,
-    height: int,
-    focal_length: float,
-    horizontal_aperture: float,
-    vertical_aperture: float
-) -> np.ndarray:
-    """
-    Calculate camera intrinsic matrix from focal length and apertures.
-
-    Args:
-        width (int): Image width in pixels.
-        height (int): Image height in pixels.
-        focal_length (float): Focal length in mm or consistent unit.
-        horizontal_aperture (float): Horizontal aperture size.
-        vertical_aperture (float): Vertical aperture size.
-
-    Returns:
-        np.ndarray: (3, 3) camera intrinsic matrix.
-    """
-    fx = focal_length * width / horizontal_aperture
-    fy = focal_length * height / vertical_aperture
+def get_sim_cam_mat_with_params(focal_length, horizontal_aperture, vertical_aperture, width, height):
+    fx = focal_length / horizontal_aperture * width
+    fy = focal_length / vertical_aperture * height
     cx = width / 2.0
     cy = height / 2.0
 
-    K = np.array([
-        [fx,  0, cx],
-        [ 0, fy, cy],
-        [ 0,  0,  1]
+    cam_mat = np.array([
+        [fx, 0, cx],
+        [0, fy, cy],
+        [0, 0, 1]
     ], dtype=np.float32)
-
-    return K
+    return cam_mat
 
 
 def project_point(cam_mat, p):
@@ -659,14 +623,6 @@ def load_clip_sparse_map(load_path: str):
         clip_sparse_map = f["clip_sparse_map"][:]
         robot_pose_list = f["robot_pose_list"][:]
     return clip_sparse_map, robot_pose_list
-
-
-def load_calib(calib_file: str) -> np.ndarray:
-    """Load calibration file."""
-    with open(calib_file, "r") as f:
-        line = f.readline()
-        calib = np.array([float(x) for x in line.strip().split(",")]).reshape((3, 3))
-    return calib
 
 
 def load_real_pose(pose_file: str) -> np.ndarray:

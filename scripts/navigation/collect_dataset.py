@@ -153,28 +153,32 @@ def main():
                 rgb_dataset.append(rgb_frame)
                 depth_dataset.append(depth_frame)
                 pose_dataset.append(camera_pose)
-
-                if finish_recording:
-                    # Save dataset
-                    rgb_dataset_dir = os.path.join(args_cli.dataset_dir, "rgb")
-                    depth_dataset_dir = os.path.join(args_cli.dataset_dir, "depth")
-                    pose_dataset_dir = os.path.join(args_cli.dataset_dir, "pose")
-                    os.makedirs(rgb_dataset_dir, exist_ok=True)
-                    os.makedirs(depth_dataset_dir, exist_ok=True)
-                    os.makedirs(pose_dataset_dir, exist_ok=True)
-                    np.save(os.path.join(rgb_dataset_dir, f"rgb_{episode_index}.npy"), rgb_dataset)
-                    np.save(os.path.join(depth_dataset_dir, f"depth_{episode_index}.npy"), depth_dataset)
-                    np.save(os.path.join(pose_dataset_dir, f"pose_{episode_index}.npy"), pose_dataset)
-
-                    # Reset simulation environment
-                    env.reset()
-                    finish_recording = False
-                    rgb_dataset, depth_dataset, pose_dataset = [], [], []
-                    episode_index += 1
-                    print("Finish recording")
             else:
                 env.sim.render()
 
+            if finish_recording:
+                # Save dataset
+                rgb_dataset_dir = os.path.join(args_cli.dataset_dir, "rgb")
+                depth_dataset_dir = os.path.join(args_cli.dataset_dir, "depth")
+                pose_dataset_dir = os.path.join(args_cli.dataset_dir, "pose")
+                os.makedirs(rgb_dataset_dir, exist_ok=True)
+                os.makedirs(depth_dataset_dir, exist_ok=True)
+                os.makedirs(pose_dataset_dir, exist_ok=True)
+                np.save(os.path.join(rgb_dataset_dir, f"rgb_{episode_index}.npy"), rgb_dataset)
+                np.save(os.path.join(depth_dataset_dir, f"depth_{episode_index}.npy"), depth_dataset)
+                np.save(os.path.join(pose_dataset_dir, f"pose_{episode_index}.npy"), pose_dataset)
+
+                # Reset simulation environment
+                env.reset()
+                finish_recording = False
+                rgb_dataset, depth_dataset, pose_dataset = [], [], []
+                episode_index += 1
+                user_input = input("Finish recording: Do you want to continue? (y/n): ")
+                if user_input.lower() == "y":
+                    break
+                else:
+                    teleoperation_active = False
+                    continue
     # Shutdown
     env.close()
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Sequence, TYPE_CHECKING
 
 import torch
+from isaaclab.assets import Articulation
 from isaaclab.managers import ActionTerm
 from isaaclab.utils import math as math_utils
 
@@ -14,7 +15,7 @@ class RotorAction(ActionTerm):
     """Rotor position, velocity, acceleration (+yaw) action to rotor forces/thrust for a multirotor."""
 
     cfg: rotor_actions_cfg.RotorActionCfg
-    _asset: "Articulation"  # injected by ActionTerm
+    _asset: Articulation  # injected by ActionTerm
 
     def __init__(self, cfg: rotor_actions_cfg.RotorActionCfg, env: ManagerBasedEnv):
         super().__init__(cfg, env)

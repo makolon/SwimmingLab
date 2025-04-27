@@ -1,13 +1,7 @@
-from dataclasses import MISSING
-
-import torch
-
 import isaaclab.sim as sim_utils
-from isaaclab.sim.spawners.materials import RigidBodyMaterialCfg
-from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 
 ##

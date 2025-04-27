@@ -25,11 +25,20 @@ simulation_app = app_launcher.app
 """Reset everything follows."""
 
 import gymnasium as gym
+import numpy as np
 import swimlab  # noqa: F401
 import swimlab_tasks  # noqa: F401
-import time
 import torch
-from isaaclab_tasks.utils import parse_env_cfg
+import zarr
+import os
+from typing import Callable
+from pathlib import Path
+from rsl_rl.runners import OnPolicyRunner
+
+from isaaclab.utils.assets import retrieve_file_path
+from isaaclab.devices import Se3Keyboard
+from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg
+from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 
 
 def save_to_zarr(data, output_dir, episode_index):
@@ -49,13 +58,13 @@ def pre_process_actions(
 ) -> torch.Tensor:
     commands, _ = teleop_data
     # Convert to torch
-    commands = torch.tensor(commands, dtype=torch.float, device=device).repeat(num_envs, 1)
+    commands = torch.tensor(commands, dtype=torch.float, device=policy.device).repeat(args_cli.num_envs, 1)
     velocity_commands = torch.cat((
         commands[:, 0],  # move x-axis
         commands[:, 1],  # move y-axis
         commands[:, 2],  # move z-axis
         commands[:, 5],  # rotate z-axis
-    ), device=device)
+    ), device=policy.device)
     # Substitute velocity_commands
     obs[:, 9:13] = velocity_commands
 
@@ -128,6 +137,7 @@ def main():
 
     episode_data = []
     episode_index = 0
+    step = 0
     while simulation_app.is_running():
         with torch.inference_mode():
             # Get device command
@@ -136,7 +146,7 @@ def main():
             # Only apply teleop commands when active
             if teleoperation_active:
                 # Compute actions based on teleoperation commands
-                actions = pre_process_actions(policy, obs, teleope_data)
+                actions = pre_process_actions(policy, obs, teleop_data)
                 # Apply actions
                 obs, rew, done, extras = env.step(actions)
             else:
@@ -160,7 +170,7 @@ def main():
                 "next.done": done,
             })
 
-            # Increment step
+            # Update step
             step += 1
 
             if should_reset_recording_instance:
@@ -168,7 +178,7 @@ def main():
                 save_to_zarr(
                     data={
                         key: np.array([frame[key] for frame in episode_data])
-                        for key in episode-data[0]
+                        for key in episode_data[0]
                     },
                     output_dir=args_cli.root_dir,
                     episode_index=episode_index,
