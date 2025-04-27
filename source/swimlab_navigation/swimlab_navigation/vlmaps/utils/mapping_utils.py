@@ -233,7 +233,6 @@ def depth2pc(depth, fov=90, intr_mat=None, min_depth=0.1, max_depth=10):
     cam_mat = intr_mat
     if intr_mat is None:
         cam_mat = get_sim_cam_mat_with_fov(h, w, fov)
-    # cam_mat[:2, 2] = 0
     cam_mat_inv = np.linalg.inv(cam_mat)
 
     y, x = np.meshgrid(np.arange(h), np.arange(w), indexing="ij")
@@ -247,21 +246,12 @@ def depth2pc(depth, fov=90, intr_mat=None, min_depth=0.1, max_depth=10):
     mask = pc[2, :] > min_depth
 
     mask = np.logical_and(mask, pc[2, :] < max_depth)
-    # pc = pc[:, mask]
     return pc, mask
 
 
 def get_new_pallete(num_cls):
     n = num_cls
     pallete = [0] * (n * 3)
-    # hsv_step = int(179 / n)
-    # for j in range(0, n):
-    #     hsv = np.array([hsv_step * j, 255, 255], dtype=np.uint8).reshape((1,1,3))
-    #     rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
-    #     rgb = rgb.reshape(-1)
-    #     pallete[j * 3 + 0] = rgb[0]
-    #     pallete[j * 3 + 1] = rgb[1]
-    #     pallete[j * 3 + 2] = rgb[2]
 
     for j in range(0, n):
         lab = j
@@ -306,8 +296,6 @@ def transform_pc(pc, pose):
     """
     pose: the pose of the camera coordinate where the pc is in
     """
-    # pose_inv = np.linalg.inv(pose)
-
     pc_homo = np.vstack([pc, np.ones((1, pc.shape[1]))])
 
     pc_global_homo = pose @ pc_homo
@@ -586,6 +574,40 @@ def get_sim_cam_mat(h, w):
     cam_mat[0, 2] = w / 2.0
     cam_mat[1, 2] = h / 2.0
     return cam_mat
+
+
+def get_camera_intrinsic_matrix(
+    width: int,
+    height: int,
+    focal_length: float,
+    horizontal_aperture: float,
+    vertical_aperture: float
+) -> np.ndarray:
+    """
+    Calculate camera intrinsic matrix from focal length and apertures.
+
+    Args:
+        width (int): Image width in pixels.
+        height (int): Image height in pixels.
+        focal_length (float): Focal length in mm or consistent unit.
+        horizontal_aperture (float): Horizontal aperture size.
+        vertical_aperture (float): Vertical aperture size.
+
+    Returns:
+        np.ndarray: (3, 3) camera intrinsic matrix.
+    """
+    fx = focal_length * width / horizontal_aperture
+    fy = focal_length * height / vertical_aperture
+    cx = width / 2.0
+    cy = height / 2.0
+
+    K = np.array([
+        [fx,  0, cx],
+        [ 0, fy, cy],
+        [ 0,  0,  1]
+    ], dtype=np.float32)
+
+    return K
 
 
 def project_point(cam_mat, p):

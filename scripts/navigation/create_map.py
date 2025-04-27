@@ -4,7 +4,6 @@ import math
 from pathlib import Path
 
 import numpy as np
-import cv2
 import gdown
 import torch
 import torchvision.transforms as transforms
@@ -14,7 +13,6 @@ import clip
 from tqdm import tqdm
 from scipy.spatial.transform import Rotation as R
 from swimlab_navigation.vlmaps.utils.mapping_utils import (
-    load_pose,
     save_map,
     depth2pc,
     transform_pc,
@@ -44,7 +42,6 @@ def get_lseg_feat(
     norm_mean: list[float] = [0.5, 0.5, 0.5],
     norm_std: list[float] = [0.5, 0.5, 0.5],
 ):
-    vis_image = image.copy()
     image = transform(image).unsqueeze(0).cuda()
     img = image[0].permute(1,2,0)
     img = img * 0.5 + 0.5
@@ -115,8 +112,6 @@ def get_lseg_feat(
 
     outputs = outputs.cpu()
     outputs = outputs.numpy() # B, D, H, W
-    predicts = [torch.max(logit, 0)[1].cpu().numpy() for logit in logits_outputs]
-    pred = predicts[0]
 
     return outputs
 
@@ -181,7 +176,6 @@ def create_lseg_map_batch(
 
     norm_mean= [0.5, 0.5, 0.5]
     norm_std = [0.5, 0.5, 0.5]
-    padding = [0.0] * 3
     transform = transforms.Compose(
         [
             transforms.ToTensor(),

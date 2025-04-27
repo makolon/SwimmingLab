@@ -25,13 +25,11 @@ import numpy as np
 import swimlab  # noqa: F401
 import swimlab_tasks  # noqa: F401
 import os
-import time
 import torch
 
 import isaaclab.utils.math as math_utils
 from isaaclab.devices import Se3Keyboard
 from isaaclab_tasks.utils import parse_env_cfg
-from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 
 
 def pre_process_actions(
@@ -173,6 +171,7 @@ def main():
                     finish_recording = False
                     rgb_dataset, depth_dataset, pose_dataset = [], [], []
                     episode_index += 1
+                    print("Finish recording")
             else:
                 env.sim.render()
 

@@ -1,28 +1,19 @@
 import argparse
 import os
-import math
-from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
-import gdown
-import torch
-
-import clip
+import open3d as o3d
 
 from tqdm import tqdm
 from scipy.spatial.transform import Rotation as R
 from swimlab_navigation.vlmaps.utils.mapping_utils import (
-    load_pose,
-    save_map,
     depth2pc,
     transform_pc,
     get_sim_cam_mat,
     pos2grid_id,
     project_point,
 )
-from swimlab_navigation.vlmaps.lseg.additional_utils.models import resize_image, pad_image, crop_image
 
 parser = argparse.ArgumentParser(description="Debug map consturction.")
 parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory containing rgb, depth, pose folders.")
@@ -33,56 +24,30 @@ parser.add_argument("--depth_sample_rate", type=int, default=100, help="Subsampl
 args_cli = parser.parse_args()
 
 
-def transform_quat(quat: np.ndarray) -> np.ndarray:
+def convert_pose(pos: np.ndarray, quat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
-    Convert quaternion from (x forward, y right, z up) frame
-    to (x right, y down, z forward) frame.
+    Convert pose (position and orientation) from (x forward, y right, z up) 
+    to (x right, y down, z forward).
 
     Args:
-        quat (np.ndarray): (4) quaternion in (x, y, z, w) format
+        pos (np.ndarray): Position (3,) in meters.
+        quat (np.ndarray): Quaternion (4,) in (x, y, z, w) format.
 
     Returns:
-        np.ndarray: (4) transformed quaternion in (x, y, z, w) format
+        tuple[np.ndarray, np.ndarray]: Transformed (position, quaternion).
     """
-    assert quat.shape[-1] == 4, "Input should be (4) for quaternion (xyzw format)."
+    assert pos.shape == (3,), f"Input position must be of shape (3,), but got {pos.shape}"
+    assert quat.shape == (4,), f"Input quaternion must be of shape (4,), but got {quat.shape}"
 
-    # Convert quaternion to rotation matrix
-    x, y, z, w = quat[0], quat[1], quat[2], quat[3]
+    rot = R.from_quat(quat).as_euler("xyz")
+    roll, pitch, yaw = rot[0], rot[1], rot[2]
+    rot_new = np.array([pitch, -yaw, roll], dtype=np.float32)
+    pos_new = np.array([pos[1], -pos[2], pos[0]])
 
-    # Rotation matrix (batch)
-    rot = np.zeros((3, 3))
+    rot_new = R.from_euler("xyz", rot_new)
+    quat_new = rot_new.as_quat()
 
-    rot[0, 0] = 1 - 2 * (y ** 2 + z ** 2)
-    rot[0, 1] = 2 * (x * y - z * w)
-    rot[0, 2] = 2 * (x * z + y * w)
-    rot[1, 0] = 2 * (x * y + z * w)
-    rot[1, 1] = 1 - 2 * (x ** 2 + z ** 2)
-    rot[1, 2] = 2 * (y * z - x * w)
-    rot[2, 0] = 2 * (x * z - y * w)
-    rot[2, 1] = 2 * (y * z + x * w)
-    rot[2, 2] = 1 - 2 * (x ** 2 + y ** 2)
-
-    # Coordinate axis transformation matrix
-    # Old basis: (x, y, z)
-    # New basis: (y, -z, x)
-    transform = np.array([
-        [0, 0, 1],
-        [0, -1, 0],
-        [1, 0, 0]
-    ], dtype=np.float32)  # (3,3)
-
-    # Apply basis change: R_new = T * R_old * T^T
-    rot_new = transform @ rot @ transform.T
-
-    # Convert rotation matrix back to quaternion
-    qw = 0.5 * np.sqrt(1 + rot_new[0, 0] + rot_new[1, 1] + rot_new[2, 2])
-    qx = (rot_new[2, 1] - rot_new[1, 2]) / (4 * qw)
-    qy = (rot_new[0, 2] - rot_new[2, 0]) / (4 * qw)
-    qz = (rot_new[1, 0] - rot_new[0, 1]) / (4 * qw)
-
-    quat_new = np.stack([qx, qy, qz, qw])
-
-    return quat_new
+    return pos_new, quat_new
 
 
 def debug_map(
@@ -92,15 +57,6 @@ def debug_map(
     gs: int = 1000,
     depth_sample_rate: int = 100
 ):
-    mask_version = 1 # 0, 1
-
-    crop_size = 480 # 480
-    base_size = 520 # 520
-
-    norm_mean= [0.5, 0.5, 0.5]
-    norm_std = [0.5, 0.5, 0.5]
-    padding = [0.0] * 3
-
     print(f"loading scene {dataset_dir}")
     rgb_dir = os.path.join(dataset_dir, "rgb")
     depth_dir = os.path.join(dataset_dir, "depth")
@@ -119,15 +75,11 @@ def debug_map(
 
     map_save_dir = os.path.join(dataset_dir, "map")
     os.makedirs(map_save_dir, exist_ok=True)
-    color_top_down_save_path = os.path.join(map_save_dir, f"color_top_down_{mask_version}.npy")
-    weight_save_path = os.path.join(map_save_dir, f"weight_lseg_{mask_version}.npy")
-    obstacles_save_path = os.path.join(map_save_dir, "obstacles.npy")
 
     # initialize a grid with zero position at the center
     color_top_down_height = (camera_height + 1) * np.ones((gs, gs), dtype=np.float32)
     color_top_down = np.zeros((gs, gs, 3), dtype=np.uint8)
     obstacles = np.ones((gs, gs), dtype=np.uint8)
-    weight = np.zeros((gs, gs), dtype=float)
 
     tf_list = []
 
@@ -138,18 +90,14 @@ def debug_map(
     pbar = tqdm(total=len(rgb_data))
 
     # load all images and depths and poses
-    for data_sample in data_iter:
+    for i, data_sample in enumerate(data_iter):
         rgb, depth, pose = data_sample
 
-        # rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
         pos, rot = pose[:3], pose[3:]
-        rot = transform_quat(rot)
-        rot_mat = R.from_quat(rot).as_matrix()
-        rot_ro_cam = np.eye(3)
-        rot_ro_cam[1, 1] = -1
-        rot_ro_cam[2, 2] = -1
-        rot = rot_mat @ rot_ro_cam
+        pos, rot = convert_pose(pos, rot)
         pos[1] += camera_height
+        print("pos: {}, rot: {}".format(pos, rot))
+        rot = R.from_quat(rot).as_matrix()
 
         pose = np.eye(4)
         pose[:3, :3] = rot
@@ -171,7 +119,7 @@ def debug_map(
         pc = pc[:, mask]
         pc_global = transform_pc(pc, tf)
 
-        rgb_cam_mat = get_sim_cam_mat(rgb.shape[0], rgb.shape[1])  # TODO: Fix this
+        rgb_cam_mat = get_sim_cam_mat(rgb.shape[0], rgb.shape[1])
 
         # project all point cloud onto the ground
         for i, (p, p_local) in enumerate(zip(pc_global.T, pc.T)):
@@ -200,17 +148,15 @@ def debug_map(
         fig, axes = plt.subplots(1, 2, figsize=(12, 6))
         # color_top_down
         axes[0].imshow(color_top_down)
-        axes[0].set_title(f"Color Top-Down Map")
         axes[0].axis("off")
         # obstacles
         axes[1].imshow(obstacles, cmap="gray")
-        axes[1].set_title(f"Obstacle Map")
         axes[1].axis("off")
         plt.tight_layout()
 
         save_dir = os.path.join(map_save_dir, "viz")
         os.makedirs(save_dir, exist_ok=True)
-        plt.savefig(os.path.join(save_dir, f"map_step.png"))
+        plt.savefig(os.path.join(save_dir, "map_step.png")
 
 
 if __name__ == "__main__":
