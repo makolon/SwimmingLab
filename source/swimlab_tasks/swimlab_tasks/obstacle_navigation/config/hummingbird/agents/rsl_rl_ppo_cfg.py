@@ -9,7 +9,7 @@ class HummingBirdPlaneObstacleNavigationPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 1500
     save_interval = 50
     clip_actions = 1.0
-    experiment_name = "hummingbird_navigation"
+    experiment_name = "hummingbird_obstacle_navigation"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,

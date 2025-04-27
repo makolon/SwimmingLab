@@ -93,3 +93,18 @@ def track_ang_vel_z_world_exp(
     asset = env.scene[asset_cfg.name]
     ang_vel_error = torch.square(env.command_manager.get_command(command_name)[:, 2] - asset.data.root_ang_vel_w[:, 2])
     return torch.exp(-ang_vel_error / std**2)
+
+
+def position_command_error_tanh(env: ManagerBasedRLEnv, std: float, command_name: str) -> torch.Tensor:
+    """Reward position tracking with tanh kernel."""
+    command = env.command_manager.get_command(command_name)
+    des_pos_b = command[:, :3]
+    distance = torch.norm(des_pos_b, dim=1)
+    return 1 - torch.tanh(distance / std)
+
+
+def heading_command_error_abs(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
+    """Penalize tracking orientation error."""
+    command = env.command_manager.get_command(command_name)
+    heading_b = command[:, 3]
+    return heading_b.abs()

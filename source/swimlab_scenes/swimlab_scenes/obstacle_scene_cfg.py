@@ -43,7 +43,7 @@ class ObstacleSceneCfg(BaseSceneCfg):
     )
 
     # obstacles
-    dynamic_obstacle_collection_cfg = RigidObjectCollectionCfg(
+    dynamic_obstacle = RigidObjectCollectionCfg(
         rigid_objects={
             **{
                 f"dynamic_cube_{i}": RigidObjectCfg(
@@ -59,9 +59,9 @@ class ObstacleSceneCfg(BaseSceneCfg):
                             diffuse_color=(0.0, 1.0, 0.0), metallic=0.2
                         ),
                     ),
-                    init_state=RigidObjectCfg.InitialStateCfg(pos=(i * 1.0, 0.0, 1.5)),
+                    init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 1.5)),
                 )
-                for i in range(30)
+                for i in range(60)
             },
             **{
                 f"dynamic_cylinder_{i}": RigidObjectCfg(
@@ -78,10 +78,9 @@ class ObstacleSceneCfg(BaseSceneCfg):
                             diffuse_color=(1.0, 0.0, 0.0), metallic=0.2
                         ),
                     ),
-                    init_state=RigidObjectCfg.InitialStateCfg(pos=(i * 1.0, 2.0, 1.5)),
+                    init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 1.5)),
                 )
-                for i in range(30)
+                for i in range(60)
             }
         }
     )
-

@@ -1,5 +1,6 @@
 """Functions specific to the obstacle navigation environments."""
 
+import numpy as np
 import torch
 
 from isaaclab.sensors import RayCaster
@@ -15,9 +16,9 @@ def lidar_scan(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, lidar_range: 
     # extract the used quantities (to enable type-hinting)
     sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
 
-    # lidar parameters
-    lidar_range: torch.Tensor = torch.tensor(lidar_range, device=env.device)
-    lidar_resolution: torch.Tensor = torch.tensor(lidar_resolution, device=env.device)
-
+    scan_shape = np.prod(lidar_resolution)
+    scan_data = lidar_range - (
+        (sensor.data.ray_hits_w - sensor.data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(lidar_range).reshape(-1, scan_shape)
+    )
     # lidar scan: scan = range - (hit_points - sensoe_pos)
-    return sensor.data.ray_hits_w[..., 0] - sensor.data.pos_w[:, 0].unsqueeze(1)
+    return scan_data

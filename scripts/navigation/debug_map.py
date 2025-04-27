@@ -94,12 +94,13 @@ def debug_map(
     pbar = tqdm(total=len(rgb_data))
 
     # load all images and depths and poses
-    for i, data_sample in enumerate(data_iter):
+    for data_sample in data_iter:
         rgb, depth, pose = data_sample
 
         pos, rot = pose[:3], pose[3:]
         pos, rot = convert_pose(pos, rot)
         pos[1] += camera_height
+        print("pos: {}, rot: {}".format(pos, rot))
         rot = R.from_quat(rot).as_matrix()
 
         pose = np.eye(4)
@@ -112,10 +113,8 @@ def debug_map(
 
         tf = init_tf_inv @ pose
 
-        rgb_cam_mat = get_sim_cam_mat(640, 480)
-
         # transform all points to the global frame
-        pc, mask = depth2pc(depth, rgb_cam_mat)
+        pc, mask = depth2pc(depth)
         shuffle_mask = np.arange(pc.shape[1]) 
         np.random.shuffle(shuffle_mask)
         shuffle_mask = shuffle_mask[::depth_sample_rate]
@@ -123,6 +122,14 @@ def debug_map(
         pc = pc[:, shuffle_mask]
         pc = pc[:, mask]
         pc_global = transform_pc(pc, tf)
+
+        rgb_cam_mat = get_sim_cam_mat_with_params(
+            focal_length=1.66,
+            horizontal_aperture=1.89,
+            vertical_aperture=1.44,
+            width=640,
+            height=480,
+        )
 
         # project all point cloud onto the ground
         for i, (p, p_local) in enumerate(zip(pc_global.T, pc.T)):
@@ -134,8 +141,6 @@ def debug_map(
                 continue
 
             rgb_px, rgb_py, rgb_pz = project_point(rgb_cam_mat, p_local)
-            if not (0 <= rgb_px < rgb.shape[1] and 0 <= rgb_py < rgb.shape[0]):
-                continue
             rgb_v = rgb[rgb_py, rgb_px, :]
 
             # when the projected location is already assigned a color value before, overwrite if the current point has larger height
@@ -172,4 +177,3 @@ if __name__ == "__main__":
         gs=args_cli.gs,
         depth_sample_rate=args_cli.depth_sample_rate,
     )
-

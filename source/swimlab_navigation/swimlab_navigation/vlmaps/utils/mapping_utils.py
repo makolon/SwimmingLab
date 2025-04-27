@@ -209,28 +209,29 @@ def rgb2pc(rgb):
     return rgb_pc
 
 
-def depth2pc(depth, intr_mat, min_depth=0.1, max_depth=10.0):
+def depth2pc(depth, fov=90, intr_mat=None, min_depth=0.1, max_depth=10):
     """
-    Converts a depth map to a 3xN point cloud array (in camera coordinates).
+    Return 3xN array and the mask of valid points in [min_depth, max_depth]
     """
 
     h, w, _ = depth.shape
 
-    fx = intr_mat[0, 0]
-    fy = intr_mat[1, 1]
-    cx = intr_mat[0, 2]
-    cy = intr_mat[1, 2]
+    cam_mat = intr_mat
+    if intr_mat is None:
+        cam_mat = get_sim_cam_mat_with_fov(h, w, fov)
+    cam_mat_inv = np.linalg.inv(cam_mat)
 
     y, x = np.meshgrid(np.arange(h), np.arange(w), indexing="ij")
+    x = x.reshape((1, -1))[:, :] + 0.5
+    y = y.reshape((1, -1))[:, :] + 0.5
+    z = depth.reshape((1, -1))[:, :]
 
-    z = depth.reshape(-1)
-    x = (x.reshape(-1) - cx) * z / fx
-    y = (y.reshape(-1) - cy) * z / fy
+    p_2d = np.vstack([x, y, np.ones_like(x)])
+    pc = cam_mat_inv @ p_2d
+    pc = pc * z
+    mask = pc[2, :] > min_depth
 
-    pc = np.stack((x, y, z), axis=0)
-
-    mask = (z > min_depth) & (z < max_depth)
-
+    mask = np.logical_and(mask, pc[2, :] < max_depth)
     return pc, mask
 
 

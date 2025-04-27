@@ -20,18 +20,15 @@ import swimlab_tasks.obstacle_navigation.mdp as mdp
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    target_pose = mdp.UniformPoseCommandCfg(
+    pose_command = mdp.UniformPose2dCommandCfg(
         asset_name="robot",
-        body_name="base_link",
-        resampling_time_range=(1000.0, 1000.0),
+        simple_heading=False,
+        resampling_time_range=(1e6, 1e6),
         debug_vis=True,
-        ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(32.0, 48.0),
-            pos_y=(24.0, 32.0),
-            pos_z=(0.5, 1.5),
-            roll=(0.0, 0.0),
-            pitch=(0.0, 1.0),
-            yaw=(0.0, 0.0),
+        ranges=mdp.UniformPose2dCommandCfg.Ranges(
+            pos_x=(-10.0, 10.0),
+            pos_y=(-10.0, 10.0),
+            heading=(-math.pi, math.pi)
         ),
     )
 
@@ -58,18 +55,16 @@ class ObservationsCfg:
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
+        pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
         actions = ObsTerm(func=mdp.last_action)
-        # lidar_scan = ObsTerm(
-        #     func=mdp.lidar_scan,
-        #     params={
-        #         "sensor_cfg": SceneEntityCfg("lidar"),
-        #         "lidar_range": [-10.0, 20.0],
-        #         "lidar_resolution": 10.0,
-        #     },
-        #     noise=Unoise(n_min=-0.1, n_max=0.1),
-        # )
+        lidar_scan = ObsTerm(
+            func=mdp.lidar_scan,
+            params={
+                "sensor_cfg": SceneEntityCfg("lidar"),
+                "lidar_range": 4.0,
+                "lidar_resolution": (36, 4),
+            },
+        )
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -99,16 +94,36 @@ class EventCfg:
             },
         },
     )
+    reset_obstacles = EventTerm(
+        func=mdp.reset_obstacle_pose_uniform,
+        mode="reset",
+        params={
+            "pose_range": {"x": (-10.0, 10.0), "y": (-10.0, 10.0), "yaw": (-math.pi, math.pi)},
+            "asset_cfg": SceneEntityCfg("dynamic_obstacle"),
+        }
+    )
 
 
 @configclass
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    # -- task
-    # -- penalties
-    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-5e-3)
-    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-5e-3)
+    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-10.0)
+    position_tracking = RewTerm(
+        func=mdp.position_command_error_tanh,
+        weight=0.5,
+        params={"std": 2.0, "command_name": "pose_command"},
+    )
+    position_tracking_fine_grained = RewTerm(
+        func=mdp.position_command_error_tanh,
+        weight=0.5,
+        params={"std": 0.2, "command_name": "pose_command"},
+    )
+    orientation_tracking = RewTerm(
+        func=mdp.heading_command_error_abs,
+        weight=-0.2,
+        params={"command_name": "pose_command"},
+    )
 
 
 @configclass

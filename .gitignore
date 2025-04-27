@@ -175,6 +175,11 @@ cython_debug/
 **/checkpoints/
 **/dataset/
 
+# RL
+**/rsl_rl/
+**/rl_games/
+**/skrl/
+
 # Models
 **/Props/USD/
 **/Props/URDF/

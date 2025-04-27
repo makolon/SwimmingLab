@@ -16,7 +16,7 @@ class IRISPlaneObstacleNavigationEnvCfg(ObstacleNavigationBaseEnvCfg):
     """Configuration for the obstacle_navigation environment."""
 
     # scene settings
-    scene: ObstacleSceneCfg = ObstacleSceneCfg(num_envs=4096, env_spacing=3.0)
+    scene: ObstacleSceneCfg = ObstacleSceneCfg(num_envs=4096, env_spacing=20.0)
 
     # viewer settings
     viewer: ViewerCfg = ViewerCfg(eye=(10.0, 10.0, 10.0), lookat=(0.0, 0.0, 0.0))
