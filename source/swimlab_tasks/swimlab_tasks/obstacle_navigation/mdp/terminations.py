@@ -39,3 +39,42 @@ def terrain_out_of_bounds(
         return torch.logical_or(x_out_of_bounds, y_out_of_bounds)
     else:
         raise ValueError("Received unsupported terrain type, must be either 'plane' or 'generator'.")
+
+
+def target_reached(
+    env: ManagerBasedRLEnv,
+    threshold: float,
+    command_name: str,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Return a boolean tensor indicating whether the target is reached (distance below threshold).
+
+    Args:
+        env (ManagerBasedRLEnv): the environment instance.
+        threshold (float): distance threshold below which the target is considered reached.
+        command_name (str): name of the command to get target position.
+
+    Returns:
+        torch.Tensor: A boolean tensor (shape: (num_envs,)) indicating if the target is reached.
+    """
+    command = env.command_manager.get_command(command_name)
+    des_pos_b = command[:, 1:2]
+
+    asset = env.scene[asset_cfg.name]
+    asset_pos_b = asset.data.root_pos_w[:, 1:2]
+
+    distance = torch.norm(des_pos_b - asset_pos_b, dim=1)
+    return distance < threshold
+
+
+def root_height_above_maximum(
+    env: ManagerBasedRLEnv, maximum_height: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Terminate when the asset's root height is below the minimum height.
+
+    Note:
+        This is currently only supported for flat terrains, i.e. the minimum height is in the world frame.
+    """
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return asset.data.root_pos_w[:, 2] > maximum_height

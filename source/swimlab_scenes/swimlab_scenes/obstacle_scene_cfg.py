@@ -1,11 +1,9 @@
-import isaaclab.sim as sim_utils
-from isaaclab.assets import (
-    RigidObjectCfg,
-    RigidObjectCollectionCfg,
-)
-from isaaclab.terrains import TerrainImporterCfg
+import torch
+
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg
+from isaaclab.sensors.ray_caster import patterns
+from isaaclab.terrains import FlatPatchSamplingCfg, HfDiscreteObstaclesTerrainCfg, TerrainImporterCfg, TerrainGeneratorCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 
 ##
@@ -24,63 +22,62 @@ class ObstacleSceneCfg(BaseSceneCfg):
     # terrain
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
-        terrain_type="plane",
-        terrain_generator=None,
+        terrain_type="generator",
+        terrain_generator=TerrainGeneratorCfg(
+            seed=0,
+            size=(8.0, 8.0),
+            border_width=20.0,
+            num_rows=5,
+            num_cols=5,
+            horizontal_scale=0.1,
+            vertical_scale=0.005,
+            slope_threshold=0.75,
+            use_cache=False,
+            sub_terrains={
+                "obstacles": HfDiscreteObstaclesTerrainCfg(
+                    size=(8.0, 8.0),
+                    horizontal_scale=0.1,
+                    vertical_scale=0.1,
+                    border_width=0.0,
+                    num_obstacles=50,
+                    obstacle_height_mode="choice",
+                    obstacle_width_range=(0.4, 0.8),
+                    obstacle_height_range=(3.0, 6.0),
+                    platform_width=1.5,
+                    flat_patch_sampling={
+                        "target": FlatPatchSamplingCfg(num_patches=5, patch_radius=0.35, max_height_diff=0.05)
+                    },
+                )
+            },
+        ),
         max_init_terrain_level=5,
         collision_group=-1,
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-        ),
-        visual_material=sim_utils.MdlFileCfg(
-            mdl_path=f"{ISAACLAB_NUCLEUS_DIR}/Materials/TilesMarbleSpiderWhiteBrickBondHoned/TilesMarbleSpiderWhiteBrickBondHoned.mdl",
-            project_uvw=True,
-            texture_scale=(0.25, 0.25),
-        ),
         debug_vis=False,
     )
 
-    # obstacles
-    dynamic_obstacle = RigidObjectCollectionCfg(
-        rigid_objects={
-            **{
-                f"dynamic_cube_{i}": RigidObjectCfg(
-                    prim_path=f"/World/envs/env_.*/DynamicObstacleCube_{i}",
-                    spawn=sim_utils.CuboidCfg(
-                        size=(0.2, 0.2, 3.0),
-                        rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                            kinematic_enabled=True,
-                        ),
-                        mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
-                        collision_props=sim_utils.CollisionPropertiesCfg(),
-                        visual_material=sim_utils.PreviewSurfaceCfg(
-                            diffuse_color=(0.0, 1.0, 0.0), metallic=0.2
-                        ),
-                    ),
-                    init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 1.5)),
-                )
-                for i in range(60)
-            },
-            **{
-                f"dynamic_cylinder_{i}": RigidObjectCfg(
-                    prim_path=f"/World/envs/env_.*/DynamicObstacleCylinder_{i}",
-                    spawn=sim_utils.CylinderCfg(
-                        radius=0.1,
-                        height=3.0,
-                        rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                            kinematic_enabled=True,
-                        ),
-                        mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
-                        collision_props=sim_utils.CollisionPropertiesCfg(),
-                        visual_material=sim_utils.PreviewSurfaceCfg(
-                            diffuse_color=(1.0, 0.0, 0.0), metallic=0.2
-                        ),
-                    ),
-                    init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 1.5)),
-                )
-                for i in range(60)
-            }
-        }
+    # height scanner
+    height_scanner = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base_link",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
     )
+
+    # lidar
+    lidar = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base_link",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.0)),
+        attach_yaw_only=False,
+        pattern_cfg=patterns.BpearlPatternCfg(
+            horizontal_fov=360.0,
+            horizontal_res=10.0,
+            vertical_ray_angles=torch.linspace(-10, 20, 4).tolist(),
+        ),
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
+    )
+
+    # contact sensor
+    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)

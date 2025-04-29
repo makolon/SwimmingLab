@@ -58,8 +58,8 @@ class IRISPlaneObstacleNavigationEnvCfg(ObstacleNavigationBaseEnvCfg):
                 "mass": 0.716,
                 "inertia": {"xx": 0.07, "xy": 0.0, "xz": 0.0, "yy": 0.07, "yz": 0.0, "zz": 0.012},
                 "drag_coef": 0.2,
-                "tau_up": [0.43] * 6,
-                "tau_down": [0.43] * 6,
+                "tau_up": [0.43] * 4,
+                "tau_down": [0.43] * 4,
             }
         )
 

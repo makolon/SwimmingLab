@@ -1,5 +1,8 @@
+import torch
+
 import isaaclab.sim as sim_utils
-from isaaclab.sensors import TiledCameraCfg
+from isaaclab.sensors import TiledCameraCfg, ContactSensorCfg, RayCasterCfg
+from isaaclab.sensors.ray_caster import patterns
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
@@ -58,4 +61,30 @@ class WarehouseSceneCfg(BaseSceneCfg):
         ),
     )
 
+    # height scanner
+    height_scanner = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base_link",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
+    )
+
+    # lidar
+    lidar = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base_link",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.0)),
+        attach_yaw_only=False,
+        pattern_cfg=patterns.BpearlPatternCfg(
+            horizontal_fov=360.0,
+            horizontal_res=10.0,
+            vertical_ray_angles=torch.linspace(-10, 20, 4).tolist(),
+        ),
+        debug_vis=True,
+        mesh_prim_paths=["/World/ground"],
+    )
+
+    # contact sensor
+    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
 

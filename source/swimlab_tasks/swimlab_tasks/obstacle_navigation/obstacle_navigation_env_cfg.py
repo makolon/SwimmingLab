@@ -1,6 +1,5 @@
 from dataclasses import MISSING
 
-import math
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import ActionTermCfg as ActionTerm
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
@@ -20,15 +19,18 @@ import swimlab_tasks.obstacle_navigation.mdp as mdp
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    pose_command = mdp.UniformPose2dCommandCfg(
+    pose_command = mdp.TargetPoseCommandCfg(
         asset_name="robot",
-        simple_heading=False,
+        body_name="base_link",
         resampling_time_range=(1e6, 1e6),
-        debug_vis=True,
-        ranges=mdp.UniformPose2dCommandCfg.Ranges(
-            pos_x=(-10.0, 10.0),
-            pos_y=(-10.0, 10.0),
-            heading=(-math.pi, math.pi)
+        debug_vis=False,
+        ranges=mdp.TargetPoseCommandCfg.Ranges(
+            pos_x=(-0.5, 0.5),
+            pos_y=(24.0, 24.0),
+            pos_z=(2.0, 2.0),
+            roll=(0.0, 0.0),
+            pitch=(0.0, 0.0),
+            yaw=(0.0, 0.0),
         ),
     )
 
@@ -55,7 +57,13 @@ class ObservationsCfg:
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
-        pose_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "pose_command"})
+        pose_command = ObsTerm(
+            func=mdp.relative_to_target,
+            params={
+                "command_name": "pose_command",
+                "asset_cfg": SceneEntityCfg("robot"),
+            },
+        )
         actions = ObsTerm(func=mdp.last_action)
         lidar_scan = ObsTerm(
             func=mdp.lidar_scan,
@@ -80,27 +88,24 @@ class EventCfg:
 
     # reset
     reset_base = EventTerm(
-        func=mdp.reset_root_state_uniform,
+        func=mdp.reset_body_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-math.pi, math.pi)},
-            "velocity_range": {
-                "x": (-0.0, 0.0),
-                "y": (-0.0, 0.0),
-                "z": (-0.0, 0.0),
-                "roll": (-0.0, 0.0),
-                "pitch": (-0.0, 0.0),
-                "yaw": (-0.0, 0.0),
+            "pose_range": {
+                "x": (-10.0, 10.0),
+                "y": (-24.0, -24.0),
+                "z": (0.0, 1.0),
+                "yaw": (0.0, 0.0),
             },
+            "velocity_range": {
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
+                "z": (0.0, 0.0),
+                "roll": (0.0, 0.0),
+                "pitch": (0.0, 0.0),
+                "yaw": (0.0, 0.0),
+            }
         },
-    )
-    reset_obstacles = EventTerm(
-        func=mdp.reset_obstacle_pose_uniform,
-        mode="reset",
-        params={
-            "pose_range": {"x": (-10.0, 10.0), "y": (-10.0, 10.0), "yaw": (-math.pi, math.pi)},
-            "asset_cfg": SceneEntityCfg("dynamic_obstacle"),
-        }
     )
 
 
@@ -108,21 +113,52 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-10.0)
     position_tracking = RewTerm(
         func=mdp.position_command_error_tanh,
-        weight=0.5,
-        params={"std": 2.0, "command_name": "pose_command"},
+        params={
+            "std": 10.0,
+            "command_name": "pose_command",
+            "asset_cfg": SceneEntityCfg("robot"),
+        },
+        weight=0.1,
     )
-    position_tracking_fine_grained = RewTerm(
-        func=mdp.position_command_error_tanh,
-        weight=0.5,
-        params={"std": 0.2, "command_name": "pose_command"},
+    close_target_enough = RewTerm(
+        func=mdp.distance_to_target,
+        params={
+            "threshold": 5.0,
+            "command_name": "pose_command",
+        },
+        weight=10.0,
     )
-    orientation_tracking = RewTerm(
-        func=mdp.heading_command_error_abs,
-        weight=-0.2,
-        params={"command_name": "pose_command"},
+    velocity_alignment = RewTerm(
+        func=mdp.velocity_alignment_reward,
+        params={
+            "command_name": "pose_command",
+            "asset_cfg": SceneEntityCfg("robot"),
+        },
+        weight=0.01,
+    )
+    lidar_safety = RewTerm(
+        func=mdp.lidar_safety_reward,
+        params={
+            "sensor_cfg": SceneEntityCfg("lidar"),
+            "lidar_range": 4.0,
+            "lidar_resolution": (36, 4),
+        },
+        weight=0.005,
+    )
+    height_penalty = RewTerm(
+        func=mdp.height_penalty,
+        params={
+            "threshold": 3.0,
+            "asset_cfg": SceneEntityCfg("robot")
+        },
+        weight=0.05,
+    )
+    uprightness = RewTerm(
+        func=mdp.upright_reward,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+        weight=0.05,
     )
 
 
@@ -136,8 +172,12 @@ class TerminationsCfg:
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base_link"), "threshold": 1.0},
     )
     drone_dropping = DoneTerm(
-        func=mdp.root_height_below_minimum, params={"minimum_height": 0.1, "asset_cfg": SceneEntityCfg("robot")}
+        func=mdp.root_height_below_minimum, params={"minimum_height": 0.2, "asset_cfg": SceneEntityCfg("robot")}
     )
+    upper_limit = DoneTerm(
+        func=mdp.root_height_above_maximum, params={"maximum_height": 4.0, "asset_cfg": SceneEntityCfg("robot")}
+    )
+
 
 ##
 # Environment configuration
@@ -161,7 +201,7 @@ class ObstacleNavigationBaseEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 1
-        self.episode_length_s = 20.0
+        self.episode_length_s = 800.0
         # simulation settings
         self.sim.dt = 1 / 60
         self.sim.render_interval = self.decimation

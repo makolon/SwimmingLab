@@ -6,7 +6,7 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 @configclass
 class FireFlyPlaneObstacleNavigationPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 1500
+    max_iterations = 1000
     save_interval = 50
     experiment_name = "firefly_obstacle_navigation"
     empirical_normalization = False
