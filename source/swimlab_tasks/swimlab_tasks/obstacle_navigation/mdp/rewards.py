@@ -163,7 +163,7 @@ def position_command_error_tanh(
     relative_pos = des_pos_b - asset_pos_b
     distance = torch.norm(relative_pos, dim=1)
 
-    reward = 1.0 - 2.0 * torch.tanh(distance / std)
+    reward = 1.0 - torch.tanh(distance / std)
     return reward
 
 

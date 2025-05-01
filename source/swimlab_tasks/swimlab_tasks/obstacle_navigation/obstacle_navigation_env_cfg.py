@@ -23,11 +23,11 @@ class CommandsCfg:
     pose_command = mdp.TargetPoseCommandCfg(
         asset_name="robot",
         body_name="base_link",
-        resampling_time_range=(4.0, 4.0),
+        resampling_time_range=(1e4, 1e4),
         debug_vis=True,
         ranges=mdp.TargetPoseCommandCfg.Ranges(
             pos_x=(0.0, 0.0),
-            pos_y=(15.0, 15.0),
+            pos_y=(5.0, 5.0),
             pos_z=(3.0, 3.0),
             roll=(0.0, 0.0),
             pitch=(0.0, 0.0),
@@ -93,9 +93,9 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (0.0, 0.0),
+                "x": (-10.0, 10.0),
                 "y": (-24.0, -24.0),
-                "z": (0.0, 1.0),
+                "z": (0.0, 0.0),
                 "yaw": (0.0, 0.0),
             },
             "velocity_range": {
@@ -117,7 +117,7 @@ class RewardsCfg:
     position_tracking = RewTerm(
         func=mdp.position_command_error_tanh,
         params={
-            "std": 48.0,
+            "std": 24.0,
             "command_name": "pose_command",
             "asset_cfg": SceneEntityCfg("robot"),
         },
@@ -126,7 +126,7 @@ class RewardsCfg:
     height_penalty = RewTerm(
         func=mdp.height_penalty,
         params={
-            "threshold": 3.0,
+            "threshold": 3.75,
             "asset_cfg": SceneEntityCfg("robot")
         },
         weight=0.05,
@@ -157,7 +157,7 @@ class TerminationsCfg:
         func=mdp.terrain_out_of_bounds,
         params={
             "asset_cfg": SceneEntityCfg("robot"),
-            "distance_buffer": 3.0,
+            "distance_buffer": 2.0,
         },
     )
 
