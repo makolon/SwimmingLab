@@ -1,5 +1,6 @@
 from dataclasses import MISSING
 
+import math
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import ActionTermCfg as ActionTerm
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
@@ -22,12 +23,12 @@ class CommandsCfg:
     pose_command = mdp.TargetPoseCommandCfg(
         asset_name="robot",
         body_name="base_link",
-        resampling_time_range=(1e6, 1e6),
-        debug_vis=False,
+        resampling_time_range=(4.0, 4.0),
+        debug_vis=True,
         ranges=mdp.TargetPoseCommandCfg.Ranges(
-            pos_x=(-0.5, 0.5),
-            pos_y=(24.0, 24.0),
-            pos_z=(2.0, 2.0),
+            pos_x=(0.0, 0.0),
+            pos_y=(15.0, 15.0),
+            pos_z=(3.0, 3.0),
             roll=(0.0, 0.0),
             pitch=(0.0, 0.0),
             yaw=(0.0, 0.0),
@@ -92,7 +93,7 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (-10.0, 10.0),
+                "x": (0.0, 0.0),
                 "y": (-24.0, -24.0),
                 "z": (0.0, 1.0),
                 "yaw": (0.0, 0.0),
@@ -116,36 +117,11 @@ class RewardsCfg:
     position_tracking = RewTerm(
         func=mdp.position_command_error_tanh,
         params={
-            "std": 10.0,
+            "std": 48.0,
             "command_name": "pose_command",
             "asset_cfg": SceneEntityCfg("robot"),
         },
-        weight=0.1,
-    )
-    close_target_enough = RewTerm(
-        func=mdp.distance_to_target,
-        params={
-            "threshold": 5.0,
-            "command_name": "pose_command",
-        },
-        weight=10.0,
-    )
-    velocity_alignment = RewTerm(
-        func=mdp.velocity_alignment_reward,
-        params={
-            "command_name": "pose_command",
-            "asset_cfg": SceneEntityCfg("robot"),
-        },
-        weight=0.01,
-    )
-    lidar_safety = RewTerm(
-        func=mdp.lidar_safety_reward,
-        params={
-            "sensor_cfg": SceneEntityCfg("lidar"),
-            "lidar_range": 4.0,
-            "lidar_resolution": (36, 4),
-        },
-        weight=0.005,
+        weight=1.0,
     )
     height_penalty = RewTerm(
         func=mdp.height_penalty,
@@ -176,6 +152,13 @@ class TerminationsCfg:
     )
     upper_limit = DoneTerm(
         func=mdp.root_height_above_maximum, params={"maximum_height": 4.0, "asset_cfg": SceneEntityCfg("robot")}
+    )
+    out_of_bounds = DoneTerm(
+        func=mdp.terrain_out_of_bounds,
+        params={
+            "asset_cfg": SceneEntityCfg("robot"),
+            "distance_buffer": 3.0,
+        },
     )
 
 

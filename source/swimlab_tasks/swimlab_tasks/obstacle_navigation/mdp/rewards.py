@@ -72,6 +72,7 @@ def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = Scen
     reward = torch.sum(body_vel.norm(dim=-1) * contacts, dim=1)
     return reward
 
+
 def height_penalty(
     env, threshold: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -117,9 +118,11 @@ def velocity_alignment_reward(env: ManagerBasedRLEnv, command_name: str, asset_c
     asset = env.scene[asset_cfg.name]
     command = env.command_manager.get_command(command_name)
     des_pos_b = command[:, :3]  # relative position to target
-    distance = torch.norm(des_pos_b, dim=1, keepdim=True)
-    vel_direction = des_pos_b / distance.clamp_min(1e-6)
-    reward_vel = (asset.data.root_lin_vel_b * vel_direction).sum(-1).clamp(max=2.0)
+    asset_pos_b = asset.data.root_pos_w[:, :3]
+    relative_pos = des_pos_b - asset_pos_b
+    distance = torch.norm(relative_pos, dim=-1, keepdim=True)
+    vel_direction = relative_pos / distance.clamp_min(1e-6)
+    reward_vel = (asset.data.root_lin_vel_b[..., :3] * vel_direction).sum(-1).clamp(max=2.0)
     return reward_vel
 
 
@@ -127,13 +130,13 @@ def lidar_safety_reward(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, lida
     """Reward for staying safe from obstacles using lidar scan."""
     sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
     scan_shape = lidar_resolution[0] * lidar_resolution[1]
-    scan_data = lidar_range - (
+    scan_data = (
         (sensor.data.ray_hits_w - sensor.data.pos_w.unsqueeze(1))
         .norm(dim=-1)
         .clamp_max(lidar_range)
         .reshape(-1, scan_shape)
     )
-    reward_safety = torch.log(scan_data.clamp(min=1e-6)).mean(dim=1)
+    reward_safety = torch.log(scan_data).mean(dim=1)
     return reward_safety
 
 
@@ -152,29 +155,16 @@ def position_command_error_tanh(
 ) -> torch.Tensor:
     """Reward position tracking with tanh kernel."""
     command = env.command_manager.get_command(command_name)
-    des_pos_b = command[:, 1:2]  # y-axis
+    des_pos_b = command[:, :3]
 
     asset = env.scene[asset_cfg.name]
-    asset_pos_b = asset.data.root_pos_w[:, 1:2]  # y-axis
+    asset_pos_b = asset.data.root_pos_w[:, :3]
 
-    distance = torch.norm(des_pos_b - asset_pos_b, dim=1)
-    return 1 - torch.tanh(distance / std)
+    relative_pos = des_pos_b - asset_pos_b
+    distance = torch.norm(relative_pos, dim=1)
 
-
-def position_command_distance(
-    env: ManagerBasedRLEnv,
-    command_name: str,
-    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-) -> torch.Tensor:
-    """Penalize tracking orientation error."""
-    command = env.command_manager.get_command(command_name)
-    des_pos_b = command[:, 1:2]
-
-    asset = env.scene[asset_cfg.name]
-    asset_pos_b = asset.data.root_pos_w[:, 1:2]
-
-    distance = torch.norm(des_pos_b - asset_pos_b, dim=1)
-    return distance
+    reward = 1.0 - 2.0 * torch.tanh(distance / std)
+    return reward
 
 
 def heading_command_error_abs(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
@@ -201,10 +191,10 @@ def distance_to_target(
         torch.Tensor: A boolean tensor (shape: (num_envs,)) indicating if the target is reached.
     """
     command = env.command_manager.get_command(command_name)
-    des_pos_b = command[:, 1:2]  # y-axis
+    des_pos_b = command[:, :3]
 
     asset = env.scene[asset_cfg.name]
-    asset_pos_b = asset.data.root_pos_w[:, 1:2]  # y-axis
+    asset_pos_b = asset.data.root_pos_w[:, :3]
 
     distance = torch.norm(des_pos_b - asset_pos_b, dim=1)
     return distance < threshold

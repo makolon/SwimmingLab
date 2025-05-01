@@ -176,9 +176,9 @@ cython_debug/
 **/dataset/
 
 # RL
-**/rsl_rl/
-**/rl_games/
-**/skrl/
+**/logs/
+**/wandb/
+**/outputs/
 
 # Models
 **/Props/USD/

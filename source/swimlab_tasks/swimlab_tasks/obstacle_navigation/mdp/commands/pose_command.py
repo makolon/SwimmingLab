@@ -57,7 +57,6 @@ class TargetPoseCommand(CommandTerm):
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
         self.pose_command_b = torch.zeros(self.num_envs, 7, device=self.device)
         self.pose_command_b[:, 3] = 1.0
-        self.pose_command_w = torch.zeros_like(self.pose_command_b)
         # -- metrics
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["orientation_error"] = torch.zeros(self.num_envs, device=self.device)
@@ -87,8 +86,8 @@ class TargetPoseCommand(CommandTerm):
     def _update_metrics(self):
         # compute the error
         pos_error, rot_error = compute_pose_error(
-            self.pose_command_w[:, :3],
-            self.pose_command_w[:, 3:],
+            self.pose_command_b[:, :3],
+            self.pose_command_b[:, 3:],
             self.robot.data.body_state_w[:, self.body_idx, :3],
             self.robot.data.body_state_w[:, self.body_idx, 3:7],
         )
@@ -137,7 +136,7 @@ class TargetPoseCommand(CommandTerm):
             return
         # update the markers
         # -- goal pose
-        self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3], self.pose_command_w[:, 3:])
+        self.goal_pose_visualizer.visualize(self.pose_command_b[:, :3], self.pose_command_b[:, 3:])
         # -- current body pose
         body_link_state_w = self.robot.data.body_state_w[:, self.body_idx]
         self.current_pose_visualizer.visualize(body_link_state_w[:, :3], body_link_state_w[:, 3:7])

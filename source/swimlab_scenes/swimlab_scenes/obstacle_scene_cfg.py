@@ -75,6 +75,7 @@ class ObstacleSceneCfg(BaseSceneCfg):
             horizontal_res=10.0,
             vertical_ray_angles=torch.linspace(-10, 20, 4).tolist(),
         ),
+        max_distance=4.0,
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
     )

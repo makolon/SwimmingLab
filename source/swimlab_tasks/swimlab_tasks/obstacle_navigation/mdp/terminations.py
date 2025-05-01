@@ -58,10 +58,10 @@ def target_reached(
         torch.Tensor: A boolean tensor (shape: (num_envs,)) indicating if the target is reached.
     """
     command = env.command_manager.get_command(command_name)
-    des_pos_b = command[:, 1:2]
+    des_pos_b = command[:, :3]
 
     asset = env.scene[asset_cfg.name]
-    asset_pos_b = asset.data.root_pos_w[:, 1:2]
+    asset_pos_b = asset.data.root_pos_w[:, :3]
 
     distance = torch.norm(des_pos_b - asset_pos_b, dim=1)
     return distance < threshold
@@ -78,3 +78,12 @@ def root_height_above_maximum(
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
     return asset.data.root_pos_w[:, 2] > maximum_height
+
+
+def lin_vel_limit(
+    env: ManagerBasedRLEnv, max_velocity: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Terminate when the asset's linear velocity exceeds the maximum velocity."""
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return torch.norm(asset.data.root_lin_vel_w[..., :3], dim=-1) > max_velocity

@@ -20,7 +20,6 @@ def lidar_scan(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, lidar_range: 
     scan_data = lidar_range - (
         (sensor.data.ray_hits_w - sensor.data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(lidar_range).reshape(-1, scan_shape)
     )
-    # lidar scan: scan = range - (hit_points - sensoe_pos)
     return scan_data
 
 
@@ -48,10 +47,10 @@ def relative_to_target(
         torch.Tensor: A boolean tensor (shape: (num_envs,)) indicating if the target is reached.
     """
     command = env.command_manager.get_command(command_name)
-    des_pos_b = command[:, 1:2]
+    des_pos_b = command[:, :3]
 
     asset = env.scene[asset_cfg.name]
-    asset_pos_b = asset.data.root_pos_w[:, 1:2]
+    asset_pos_b = asset.data.root_pos_w[:, :3]
 
-    distance = des_pos_b - asset_pos_b
-    return distance
+    relative_pos = des_pos_b - asset_pos_b
+    return relative_pos
