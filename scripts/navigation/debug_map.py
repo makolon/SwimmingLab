@@ -9,7 +9,6 @@ from scipy.spatial.transform import Rotation as R
 from swimlab_navigation.vlmaps.utils.mapping_utils import (
     depth2pc,
     transform_pc,
-    get_sim_cam_mat,
     get_sim_cam_mat_with_params,
     pos2grid_id,
     project_point,
@@ -17,10 +16,10 @@ from swimlab_navigation.vlmaps.utils.mapping_utils import (
 
 parser = argparse.ArgumentParser(description="Debug map consturction.")
 parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory containing rgb, depth, pose folders.")
-parser.add_argument("--camera_height", type=float, default=1.4, help="Height of the camera above ground.")
+parser.add_argument("--camera_height", type=float, default=2.0, help="Height of the camera above ground.")
 parser.add_argument("--cs", type=float, default=0.05, help="Cell size (meters) for top-down map grid.")
 parser.add_argument("--gs", type=int, default=1000, help="Grid size (number of cells per axis) for top-down map.")
-parser.add_argument("--depth_sample_rate", type=int, default=100, help="Subsampling rate for depth points.")
+parser.add_argument("--depth_sample_rate", type=int, default=10, help="Subsampling rate for depth points.")
 args_cli = parser.parse_args()
 
 
@@ -39,13 +38,13 @@ def convert_pose(pos: np.ndarray, quat: np.ndarray) -> tuple[np.ndarray, np.ndar
     assert quat.shape == (4,)
 
     # Flip the y-axis for position
-    pos_new = np.array([pos[0], -pos[1], pos[2]], dtype=np.float32)
+    pos_new = np.array([pos[0], pos[2], -pos[1]], dtype=np.float32)
 
     # Convert quaternion to rotation matrix
     rot_mat = R.from_quat(quat).as_matrix()
 
     # Flip the y-axis for rotation matrix
-    flip_y = np.diag([1, -1, -1])
+    flip_y = np.diag([1, 1, -1])
     rot_mat_new = flip_y @ rot_mat @ flip_y
 
     # Convert back to quaternion
@@ -94,16 +93,12 @@ def debug_map(
     pbar = tqdm(total=len(rgb_data))
 
     # load all images and depths and poses
-    for data_sample in data_iter:
-        rgb, depth, pose = data_sample
-
+    for rgb, depth, pose in data_iter:
         pos, rot = pose[:3], pose[3:]
         pos, rot = convert_pose(pos, rot)
-        pos[1] += camera_height
-        print("pos: {}, rot: {}".format(pos, rot))
         rot = R.from_quat(rot).as_matrix()
 
-        pose = np.eye(4)
+        pose = np.eye(4) 
         pose[:3, :3] = rot
         pose[:3, 3] = pos.reshape(-1)
 
@@ -113,8 +108,16 @@ def debug_map(
 
         tf = init_tf_inv @ pose
 
+        rgb_cam_mat = get_sim_cam_mat_with_params(
+            focal_length=1.9299999475479126,
+            horizontal_aperture=3.8959999084472656,
+            vertical_aperture=2.453000068664551,
+            width=1936,
+            height=1216,
+        )
+
         # transform all points to the global frame
-        pc, mask = depth2pc(depth)
+        pc, mask = depth2pc(depth, intr_mat=rgb_cam_mat)
         shuffle_mask = np.arange(pc.shape[1]) 
         np.random.shuffle(shuffle_mask)
         shuffle_mask = shuffle_mask[::depth_sample_rate]
@@ -122,14 +125,6 @@ def debug_map(
         pc = pc[:, shuffle_mask]
         pc = pc[:, mask]
         pc_global = transform_pc(pc, tf)
-
-        rgb_cam_mat = get_sim_cam_mat_with_params(
-            focal_length=1.66,
-            horizontal_aperture=1.89,
-            vertical_aperture=1.44,
-            width=640,
-            height=480,
-        )
 
         # project all point cloud onto the ground
         for i, (p, p_local) in enumerate(zip(pc_global.T, pc.T)):

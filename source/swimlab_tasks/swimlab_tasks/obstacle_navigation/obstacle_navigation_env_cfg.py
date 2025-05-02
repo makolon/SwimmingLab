@@ -1,6 +1,5 @@
 from dataclasses import MISSING
 
-import math
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import ActionTermCfg as ActionTerm
 from isaaclab.managers import CurriculumTermCfg as CurrTerm
@@ -27,7 +26,7 @@ class CommandsCfg:
         debug_vis=True,
         ranges=mdp.TargetPoseCommandCfg.Ranges(
             pos_x=(0.0, 0.0),
-            pos_y=(5.0, 5.0),
+            pos_y=(0.0, 0.0),
             pos_z=(3.0, 3.0),
             roll=(0.0, 0.0),
             pitch=(0.0, 0.0),
@@ -158,6 +157,14 @@ class TerminationsCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot"),
             "distance_buffer": 2.0,
+        },
+    )
+    target_reached = DoneTerm(
+        func=mdp.target_reached,
+        params={
+            "threshold": 1.0,
+            "command_name": "pose_command",
+            "asset_cfg": SceneEntityCfg("robot"),
         },
     )
 

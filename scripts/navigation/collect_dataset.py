@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
 parser.add_argument("--sensitivity", type=float, default=1.0, help="Parameter for teleoperation.")
+parser.add_argument("--decimation", type=int, default=2, help="Parameter for teleoperation.")
 parser.add_argument("--dataset_dir", type=str, default="dataset", help="Output directory for the dataset.")
 # Append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -102,7 +103,7 @@ def main():
 
     # Create controller
     teleop_interface = Se3Keyboard(
-        pos_sensitivity=0.15 * args_cli.sensitivity, rot_sensitivity=0.05 * args_cli.sensitivity
+        pos_sensitivity=0.3 * args_cli.sensitivity, rot_sensitivity=0.15 * args_cli.sensitivity
     )
     teleop_interface.add_callback("R", stop_teleoperation)
     teleop_interface.add_callback("F", start_teleoperation)
@@ -111,6 +112,7 @@ def main():
     # Get robot instance
     robot = env.scene["robot"]
     camera = env.scene["camera"]
+    print("camera:", camera.data.intrinsic_matrices)
 
     rgb_dataset, depth_dataset, pose_dataset = [], [], []
 
@@ -134,15 +136,16 @@ def main():
                 body_pose = pre_process_actions(body_pose, delta_pose)
 
                 # Step simulation
-                robot.write_root_pose_to_sim(body_pose)
-                env.sim.render()
-                env.scene.update(env.sim.cfg.dt)
+                for _ in range(args_cli.decimation):
+                    robot.write_root_pose_to_sim(body_pose)
+                    env.sim.render()
+                    env.scene.update(env.sim.cfg.dt)
 
                 # Collect data
                 rgb_frame = camera.data.output["rgb"].squeeze(0).cpu().numpy()
                 depth_frame = camera.data.output["distance_to_image_plane"].squeeze(0).cpu().numpy()
-                camera_pos = camera.data.pos_w
-                camera_rot = math_utils.convert_quat(camera.data.quat_w_world, "xyzw")
+                camera_pos = robot.data.root_pos_w # camera.data.pos_w
+                camera_rot = math_utils.convert_quat(camera.data.quat_w_opengl, "xyzw")
                 camera_pose = torch.cat((camera_pos, camera_rot), dim=1).squeeze(0).cpu().numpy()
 
                 # Skil if the teleoperation commands is none
@@ -154,7 +157,9 @@ def main():
                 depth_dataset.append(depth_frame)
                 pose_dataset.append(camera_pose)
             else:
-                env.sim.render()
+                for _ in range(args_cli.decimation):
+                    env.sim.render()
+                    env.scene.update(env.sim.cfg.dt)
 
             if finish_recording:
                 # Save dataset
