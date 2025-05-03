@@ -3,7 +3,7 @@ from dataclasses import MISSING
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import RayCasterCfg
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg
 from isaaclab.sensors.ray_caster import patterns
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
@@ -59,3 +59,6 @@ class BaseSceneCfg(InteractiveSceneCfg):
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
     )
+
+    # contact sensor
+    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
