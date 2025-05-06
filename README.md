@@ -1,6 +1,6 @@
 # SwimmingLab
 ## Overview
-This repository is designed to enable the creation, management, and training of datasets for the 
+SwimmingLab is a modular framework built on NVIDIA IsaacLab for developing, training, and evaluating drone navigation and control tasks. It provides tools to configure simulation environments, define reinforcement learning tasks, and integrate high-level navigation modules such as semantic mapping. Whether you want to train a drone to follow velocity commands, avoid obstacles, or perform complex waypoint navigation, SwimmingLab offers the building blocks to get started quickly and scale experiments efficiently.
 
 ## Structure
 The repository, SwimmingLab, consists of `swimlab`, `swimlab_assets`, `swimlab_navigation`, `swimlab_scenes`, and `swimlab_tasks`:
