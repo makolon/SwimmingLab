@@ -56,18 +56,22 @@ Here is an explanation of how to train a policy.
 ### 1. Execute the Training Script
 Once your dataset is ready, follow these steps to train your policy:
 ```
-cd ./scripts/reinforcement_learning/rsl_rl/
+cd ./scripts/reinforcement_learning/
 
 python train.py --task Isaac-Plane-Track-HummingBird-Rotor-v0 --num_envs 1024
+```
+If you want to use `wandb` as a logging tool, firstly, you need to login the wandb account throught the following steps.
+```
+wandb login
+<Enter your wandb key>
 ```
 
 ### 2. Test Your Policy
 After you have trained a policy, you can evaluate its performance in the simulation environment.
 ```
-cd ./scripts/reinforcement_learning/rsl_rl/
-
+cd ./scripts/reinforcement_learning/
 python play.py --task Isaac-Plane-Track-HummingBird-Rotor-v0 --num_envs 1024
 ```
 
 ## Future Extensions
-- [ ] 
+- [ ] Complete VLMap implementations
