@@ -23,8 +23,6 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym
 import numpy as np
-import swimlab  # noqa: F401
-import swimlab_tasks  # noqa: F401
 import os
 import torch
 from scipy.spatial.transform import Rotation as R
@@ -32,6 +30,9 @@ from scipy.spatial.transform import Rotation as R
 import isaaclab.utils.math as math_utils
 from isaaclab.devices import Se3Keyboard
 from isaaclab_tasks.utils import parse_env_cfg
+
+import swimlab  # noqa: F401
+import swimlab_tasks  # noqa: F401
 
 
 def pre_process_actions(
@@ -72,34 +73,6 @@ def pre_process_actions(
     new_body_pose = torch.cat([pos, new_quat], dim=-1)
 
     return new_body_pose
-
-
-def enough_to_close(
-    body_pose: np.array,
-    camera_pose: np.array,
-    pos_threshold: float = 0.001,
-    rot_threshold: float = 0.001,
-) -> bool:
-    """
-    Check if the distance between body pose and camera pose is less than the threshold.
-
-    Args:
-        body_pose (np.array): Body pose (3,) in meters.
-        camera_pose (np.array): Camera pose (3,) in meters.
-        threshold (float): Distance threshold.
-
-    Returns:
-        bool: True if the distance is less than the threshold, False otherwise.
-    """
-    assert body_pose.shape == (7,)
-    assert camera_pose.shape == (7,)
-
-    # Calculate the distance between body and camera poses
-    pos_distance = np.linalg.norm(body_pose[:3] - camera_pose[:3])
-    body_euler = R.from_quat(body_pose[3:]).as_euler("xyz")
-    camera_euler = R.from_quat(camera_pose[3:]).as_euler("xyz")
-    rot_distance = np.linalg.norm(body_euler - camera_euler)
-    return pos_distance < pos_threshold and rot_distance < rot_threshold
 
 
 def main():
@@ -181,18 +154,6 @@ def main():
                 if torch.sum(delta_pose) == 0.0:
                     continue
 
-                # For debug
-                # _camera_pos = camera.data.pos_w
-                # _camera_rot = camera.data.quat_w_world
-                # _camera_pose = torch.cat((_camera_pos, _camera_rot), dim=1).squeeze(0).cpu().numpy()
-
-                # Check if the camera pose is close to the body pose
-                # body_pose = body_pose.squeeze(0).cpu().numpy()
-                # body_pose[2] = body_pose[2] - 0.1 # Adjust height
-                # if not enough_to_close(body_pose, _camera_pose, pos_threshold=0.001, rot_threshold=0.001):
-                #     print("Body pose {}: camera pose:{}".format(body_pose, _camera_pose))
-                #     continue
-
                 # Append frame and pose
                 rgb_dataset.append(rgb_frame)
                 depth_dataset.append(depth_frame)
@@ -223,6 +184,7 @@ def main():
                 else:
                     teleoperation_active = False
                     continue
+
     # Shutdown
     env.close()
 

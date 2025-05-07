@@ -1,9 +1,13 @@
 import torch
 
 import isaaclab.sim as sim_utils
-from isaaclab.utils import configclass
 from isaaclab.sensors import TiledCameraCfg, ContactSensorCfg, RayCasterCfg
 from isaaclab.sensors.ray_caster import patterns
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils import configclass
+
+from swimlab_assets import SWIMLAB_ASSETS_DATA_DIR
+
 
 ##
 # Pre-defined configuration
@@ -18,20 +22,34 @@ class MatterportSceneCfg(BaseSceneCfg):
     """Configuration for the living room scene with a robot and multiple objects.
     """
 
+    # matterport
+    terrain = TerrainImporterCfg(
+        prim_path="/World/ground",
+        terrain_type="usd",
+        usd_path=f"{SWIMLAB_ASSETS_DATA_DIR}/Scenes/matterport_01.usd",
+        terrain_generator=None,
+        collision_group=-1,
+        physics_material=sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction=1.0,
+            dynamic_friction=1.0,
+        ),
+        debug_vis=False,
+    )
+
     # camera
     camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="{ENV_REGEX_NS}/Robot/base_link/Camera",
-        update_period=0.0,
-        height=480,
-        width=640,
+        update_period=0,
+        height=720,
+        width=1280,
         data_types=["rgb", "distance_to_image_plane"],
         update_latest_camera_pose=True,
         spawn=sim_utils.PinholeCameraCfg(
-            focus_distance=400.0,
-            focal_length=1.66,  # NOTE: (640/2) / tan(1.047/2)
-            horizontal_aperture=1.89,  # NOTE: 640 * 0.003
-            vertical_aperture=1.44,  # NOTE: 480 * 0.003
-            clipping_range=(0.01, 1.0e3),
+            focal_length=1.93,
+            horizontal_aperture=3.8,
+            vertical_aperture=2.4,
         ),
         offset=TiledCameraCfg.OffsetCfg(
             pos=(0.0, 0.0, -0.1),
