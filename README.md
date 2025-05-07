@@ -47,7 +47,7 @@ WEBPORT=6100
 You can simulate the `Isaac-Plane-Track-HummingBird-Rotor-v0` environment by running the following command.
 ```
 cd ./scripts/examples/
-python env_example.py --task Isaac-Plane-Track-HummingBird-Rotor-v --num_envs 1024
+python env_example.py --task Isaac-Plane-Track-HummingBird-Rotor-v0 --num_envs 1024
 ```
 
 ## Train and Test Your Policy
@@ -57,7 +57,6 @@ Here is an explanation of how to train a policy.
 Once your dataset is ready, follow these steps to train your policy:
 ```
 cd ./scripts/reinforcement_learning/
-
 python train.py --task Isaac-Plane-Track-HummingBird-Rotor-v0 --num_envs 1024
 ```
 If you want to use `wandb` as a logging tool, firstly, you need to login the wandb account throught the following steps.
@@ -73,5 +72,30 @@ cd ./scripts/reinforcement_learning/
 python play.py --task Isaac-Plane-Track-HummingBird-Rotor-v0 --num_envs 1024
 ```
 
-## Future Extensions
-- [ ] Complete VLMap implementations
+## Navigation
+Below are instructions for dataset collection and semantic mapping.
+### 1. Collect Dataset
+```
+cd ./scripts/navigation/
+python collect_dataset.py --task Isaac-Warehouse-ObjectGoalNavigation-HummingBird-LeeVel-v0 --num_envs 1 --enable_cameras
+```
+This command launches an interactive control mode for data collection. Use the following keyboard shortcuts:
+* **Shift + f**: Start data collection
+* **Shift + w**: Move forward
+* **Shift + a**: Move left
+* **Shift + d**: Move right
+* **Shift + s**: Move backward
+* **Shift + c**: Rotate left
+* **Shift + v**: Rotate right
+* **Shift + r**: End data collection
+
+
+### 2. Create Semantic Map
+```
+python create_map.py --dataset_dir ./dataset/
+```
+
+### 3. Visualize Semantic Map
+```
+python visualize_map.py --map_dir ./dataset/map
+```
