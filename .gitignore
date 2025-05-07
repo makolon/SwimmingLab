@@ -179,6 +179,7 @@ cython_debug/
 **/logs/
 **/wandb/
 **/outputs/
+**/results/
 
 # Models
 **/Props/USD/

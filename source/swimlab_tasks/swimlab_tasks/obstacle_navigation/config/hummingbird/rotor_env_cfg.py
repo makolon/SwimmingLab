@@ -19,7 +19,12 @@ class HummingBirdPlaneObstacleNavigationEnvCfg(ObstacleNavigationBaseEnvCfg):
     scene: ObstacleSceneCfg = ObstacleSceneCfg(num_envs=4096, env_spacing=20.0)
 
     # viewer settings
-    viewer: ViewerCfg = ViewerCfg(eye=(10.0, 10.0, 10.0), lookat=(0.0, 0.0, 0.0))
+    viewer: ViewerCfg = ViewerCfg(
+        eye=(-2.0, 0.0, 2.0),
+        lookat=(0.0, 0.0, 0.0),
+        origin_type="asset_root",
+        asset_name="robot",
+    )
 
     def __post_init__(self):
         """Post initialization."""

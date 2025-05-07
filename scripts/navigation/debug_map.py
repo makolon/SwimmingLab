@@ -16,7 +16,7 @@ from swimlab_navigation.vlmaps.utils.mapping_utils import (
 
 parser = argparse.ArgumentParser(description="Debug map consturction.")
 parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory containing rgb, depth, pose folders.")
-parser.add_argument("--camera_height", type=float, default=2.0, help="Height of the camera above ground.")
+parser.add_argument("--camera_height", type=float, default=1.9, help="Height of the camera above ground.")
 parser.add_argument("--cs", type=float, default=0.05, help="Cell size (meters) for top-down map grid.")
 parser.add_argument("--gs", type=int, default=1000, help="Grid size (number of cells per axis) for top-down map.")
 parser.add_argument("--depth_sample_rate", type=int, default=10, help="Subsampling rate for depth points.")
@@ -107,13 +107,14 @@ def debug_map(
             init_tf_inv = np.linalg.inv(tf_list[0]) 
 
         tf = init_tf_inv @ pose
-
+        # convert to (x forward, y left, z up) to (x right, y down, z forward)
+        tf[:3, 3] = [-tf[1, 3], tf[2, 3], tf[0, 3]]
         rgb_cam_mat = get_sim_cam_mat_with_params(
-            focal_length=1.9299999475479126,
-            horizontal_aperture=3.8959999084472656,
-            vertical_aperture=2.453000068664551,
-            width=1936,
-            height=1216,
+            focal_length=1.93,
+            horizontal_aperture=3.8,
+            vertical_aperture=2.4,
+            width=1280,
+            height=720,
         )
 
         # transform all points to the global frame

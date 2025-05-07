@@ -25,10 +25,10 @@ from swimlab_navigation.vlmaps.lseg.additional_utils.models import resize_image,
 
 parser = argparse.ArgumentParser(description="Generate LSeg-based VLMaps.")
 parser.add_argument("--dataset_dir", type=str, required=True, help="Path to dataset directory containing rgb, depth, pose folders.")
-parser.add_argument("--camera_height", type=float, default=1.5, help="Height of the camera above ground.")
+parser.add_argument("--camera_height", type=float, default=1.9, help="Height of the camera above ground.")
 parser.add_argument("--cs", type=float, default=0.05, help="Cell size (meters) for top-down map grid.")
 parser.add_argument("--gs", type=int, default=1000, help="Grid size (number of cells per axis) for top-down map.")
-parser.add_argument("--depth_sample_rate", type=int, default=100, help="Subsampling rate for depth points.")
+parser.add_argument("--depth_sample_rate", type=int, default=10, help="Subsampling rate for depth points.")
 args_cli = parser.parse_args()
 
 
@@ -47,13 +47,13 @@ def convert_pose(pos: np.ndarray, quat: np.ndarray) -> tuple[np.ndarray, np.ndar
     assert quat.shape == (4,)
 
     # Flip the y-axis for position
-    pos_new = np.array([pos[0], -pos[1], pos[2]], dtype=np.float32)
+    pos_new = np.array([pos[0], pos[2], -pos[1]], dtype=np.float32)
 
     # Convert quaternion to rotation matrix
     rot_mat = R.from_quat(quat).as_matrix()
 
     # Flip the y-axis for rotation matrix
-    flip_y = np.diag([1, -1, -1])
+    flip_y = np.diag([1, 1, -1])
     rot_mat_new = flip_y @ rot_mat @ flip_y
 
     # Convert back to quaternion
@@ -157,8 +157,9 @@ def create_lseg_map_batch(
 
     crop_size = 480 # 480
     base_size = 520 # 520
-    lang = "door,chair,ground,ceiling,other"
+    lang = "door,chair,ground,ceiling,other"  # TODO: Fix this
     labels = lang.split(",")
+    print(f"labels: {labels}")
 
     # loading models
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -262,10 +263,9 @@ def create_lseg_map_batch(
 
         pos, rot = pose[:3], pose[3:]
         pos, rot = convert_pose(pos, rot)
-        pos[1] += camera_height
         rot = R.from_quat(rot).as_matrix()
 
-        pose = np.eye(4)
+        pose = np.eye(4) 
         pose[:3, :3] = rot
         pose[:3, 3] = pos.reshape(-1)
 
@@ -274,26 +274,28 @@ def create_lseg_map_batch(
             init_tf_inv = np.linalg.inv(tf_list[0]) 
 
         tf = init_tf_inv @ pose
+        # convert to (x forward, y left, z up) to (x right, y down, z forward)
+        tf[:3, 3] = [-tf[1, 3], tf[2, 3], tf[0, 3]]
 
         pix_feats = get_lseg_feat(model, rgb, labels, transform, crop_size, base_size, norm_mean, norm_std)
 
         rgb_cam_mat = get_sim_cam_mat_with_params(
-            focal_length=1.66,
-            horizontal_aperture=1.89,
-            vertical_aperture=1.44,
-            width=640,
-            height=480,
+            focal_length=1.93,
+            horizontal_aperture=3.8,
+            vertical_aperture=2.4,
+            width=rgb.shape[1],
+            height=rgb.shape[0],
         )
         feat_cam_mat = get_sim_cam_mat_with_params(
-            focal_length=1.66,
-            horizontal_aperture=1.89,
-            vertical_aperture=1.44,
+            focal_length=1.93,
+            horizontal_aperture=3.8,
+            vertical_aperture=2.4,
             width=pix_feats.shape[2],
             height=pix_feats.shape[3]
         )
 
         # transform all points to the global frame
-        pc, mask = depth2pc(depth, rgb_cam_mat)
+        pc, mask = depth2pc(depth, intr_mat=rgb_cam_mat)
         shuffle_mask = np.arange(pc.shape[1]) 
         np.random.shuffle(shuffle_mask)
         shuffle_mask = shuffle_mask[::depth_sample_rate]

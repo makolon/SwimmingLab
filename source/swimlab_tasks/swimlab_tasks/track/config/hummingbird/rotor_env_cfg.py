@@ -1,4 +1,3 @@
-
 from isaaclab.envs.common import ViewerCfg
 from isaaclab.utils import configclass
 

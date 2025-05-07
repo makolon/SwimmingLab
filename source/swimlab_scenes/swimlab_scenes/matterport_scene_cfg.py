@@ -66,4 +66,3 @@ class MatterportSceneCfg(BaseSceneCfg):
 
     # contact sensor
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
-

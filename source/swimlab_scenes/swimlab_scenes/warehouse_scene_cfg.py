@@ -42,23 +42,20 @@ class WarehouseSceneCfg(BaseSceneCfg):
     # camera
     camera: TiledCameraCfg = TiledCameraCfg(
         prim_path="{ENV_REGEX_NS}/Robot/base_link/Camera",
-        update_period=0.0,
-        height=1216,
-        width=1936,
+        update_period=0,
+        height=720,
+        width=1280,
         data_types=["rgb", "distance_to_image_plane"],
         update_latest_camera_pose=True,
-        debug_vis=True,
         spawn=sim_utils.PinholeCameraCfg(
-            focal_length=1.9299999475479126,
-            focus_distance=0.6000000238418579,
-            vertical_aperture=2.453000068664551,
-            horizontal_aperture=3.8959999084472656,
-            clipping_range=(0.01, 1000000),
+            focal_length=1.93,
+            horizontal_aperture=3.8,
+            vertical_aperture=2.4,
         ),
         offset=TiledCameraCfg.OffsetCfg(
             pos=(0.0, 0.0, -0.1),
-            rot=(0.5, 0.5, -0.5, -0.5),
-            convention="opengl",
+            rot=(0.5, -0.5, 0.5, -0.5),
+            convention="ros",
         ),
     )
 
@@ -88,4 +85,3 @@ class WarehouseSceneCfg(BaseSceneCfg):
 
     # contact sensor
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
-

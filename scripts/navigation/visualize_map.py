@@ -62,7 +62,8 @@ def visualize_maps(
     no_map_mask = obstacles[xmin : xmax + 1, ymin : ymax + 1] > 0
     print(no_map_mask.shape)
 
-    lang = "wall,box,beam"  # TODO: Fix this
+    lang = "door,chair,ground,ceiling,other"  # TODO: Fix this
+    lang = lang.split(",")
     text_feats = get_text_feats(lang, clip_model, clip_feat_dim)
 
     map_feats = grid.reshape((-1, grid.shape[-1]))
